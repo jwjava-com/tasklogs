@@ -1,4 +1,4 @@
-#!C:\Perl\bin\perl.exe
+#!/usr/bin/perl
 # removed "-w" switch to avoid "uninitialized value" warnings from !defined checks
 
 #
@@ -185,6 +185,8 @@ B<task> - time tracking tool
 
 =head1 SYNOPSIS
 
+=over
+
 =item B<task>
 
 =item B<task> I<taskname>
@@ -192,6 +194,8 @@ B<task> - time tracking tool
 =item B<task> -I<minutes> I<taskname>
 
 =item B<task quit>
+
+=back
 
 =head1 DESCRIPTION
 
@@ -218,8 +222,12 @@ B<HOME> must be set to the path of the user's home directory.
 
 =head1 FILES
 
+=over
+
 =item C<$HOME/.hours>
 
 =item C<$HOME/.hours.bak>
+
+=back
 
 =cut

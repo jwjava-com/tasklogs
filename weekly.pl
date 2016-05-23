@@ -1,4 +1,4 @@
-#!C:\Perl\bin\perl.exe -w
+#!/usr/bin/perl -w
 
 # SYNTAX: weekly.pl (MMDDYY)
 #
@@ -195,3 +195,24 @@ if ( $outfile ne 'clear' ) {
     print "\n";
 }
 
+__END__
+
+=head1 NAME
+
+B<weekly> - weekly report generator
+
+=head1 SYNOPSIS
+
+=over
+
+=item B<weekly>
+
+=item B<weekly> MMDDYY Where is Saturday week ending date
+
+=item B<weekly> -v for viewing previous weekly report
+
+=item B<weekly clear>
+
+=back
+
+=cut
