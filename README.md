@@ -18,6 +18,7 @@ either Cygwin or Linux.
 - Expand documentation
 - Port to other languages
 - Auto-create necessary paths & allow specifying different paths
+- Handle spaces inside quoted task names
 
 ## NAME
 
