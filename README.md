@@ -2,6 +2,14 @@ A set of scripts written over a decade ago to help create weekly timesheets.
 They were tweaked here-and-there during brief periods of down-time for a few years.
 Their current state is... unknown.  Putting here as they might be useful to someone.
 
+Looking at this again, after several years, there's several things that could have
+been done differently.  Handling of paths, for instance, and extracting some code
+to a PM would be good.  I've updated a few times to try to migrate from running in
+a Windows Command Prompt environment, using Active Perl, to run in a bash shell in
+either Cygwin or Linux.
+
+
+
 # NAME
 
 **task** - time tracking tool
