@@ -14,6 +14,9 @@ either Cygwin or Linux.
 
 - `weekly.pl`: Auto-calculate Saturday date if none specified
 - Extract common code to a module
+- Add better handling of incorrect parameters
+- Expand documentation
+- Port to other languages
 
 ## NAME
 
