@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 # removed "-w" switch to avoid "uninitialized value" warnings from !defined checks
+# vim: ts=4 sw=4 et
 
 #
 # task - time tracking tool
@@ -11,10 +12,14 @@ use POSIX qw(isdigit);
 #
 # Startup initialization
 #
-if (!defined $ENV{HOMEDRIVE} && !defined $ENV{HOMEPATH}) {
-    die "HOMEDRIVE and HOMEPATH environment variables not set\n";
+my $taskdir = "";
+if (defined $ENV{HOME}) {
+    $taskdir = $ENV{HOME} . "/tasklogs/";
+} elsif (defined $ENV{HOMEDRIVE} && defined $ENV{HOMEPATH}) {
+    $taskdir = $ENV{HOMEDRIVE} . $ENV{HOMEPATH} . "tasklogs\\";
+} else {
+    die "HOME or (HOMEDRIVE and HOMEPATH) environment variables not set\n";
 }
-my $taskdir = $ENV{HOMEDRIVE} . $ENV{HOMEPATH} . "tasklogs\\";
 my $logfn = $taskdir . '.hours';
 my $quit = 'quit';
 

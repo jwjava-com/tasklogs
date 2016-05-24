@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+# vim: ts=4 sw=4 et
 
 # SYNTAX: weekly.pl (MMDDYY)
 #
@@ -14,10 +15,14 @@ my $DEBUG = 0;
 #
 # Startup initialization
 #
-if (!defined $ENV{HOMEDRIVE} && !defined $ENV{HOMEPATH}) {
-    die "ERROR: HOMEDRIVE and HOMEPATH environment variables not set\n";
+my $taskdir = "";
+if (defined $ENV{HOME}) {
+    $taskdir = $ENV{HOME} . "/tasklogs/";
+} elsif (defined $ENV{HOMEDRIVE} && defined $ENV{HOMEPATH}) {
+    $taskdir = $ENV{HOMEDRIVE} . $ENV{HOMEPATH} . "tasklogs\\";
+} else {
+    die "HOME or (HOMEDRIVE and HOMEPATH) environment variables not set\n";
 }
-my $taskdir = $ENV{HOMEDRIVE} . $ENV{HOMEPATH} . "tasklogs\\";
 my $logfn = $taskdir . '.hours';
 my $weekdir = $taskdir . "weeklogs\\";
 my $outfile;

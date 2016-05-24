@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+# vim: ts=4 sw=4 et
 
 use Time::Local;
 use English;
@@ -6,10 +7,14 @@ use English;
 #
 # Startup initialization
 #
-if (!defined $ENV{HOMEDRIVE} && !defined $ENV{HOMEPATH}) {
-    die "HOMEDRIVE and HOMEPATH environment variables not set\n";
+my $taskdir = "";
+if (defined $ENV{HOME}) {
+    $taskdir = $ENV{HOME} . "/tasklogs/";
+} elsif (defined $ENV{HOMEDRIVE} && defined $ENV{HOMEPATH}) {
+    $taskdir = $ENV{HOMEDRIVE} . $ENV{HOMEPATH} . "tasklogs\\";
+} else {
+    die "HOME or (HOMEDRIVE and HOMEPATH) environment variables not set\n";
 }
-my $taskdir = $ENV{HOMEDRIVE} . $ENV{HOMEPATH} . "tasklogs\\";
 my $logfn = $taskdir . '.hours';
 
 my $option    = shift @ARGV;
