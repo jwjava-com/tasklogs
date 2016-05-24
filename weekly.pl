@@ -15,31 +15,46 @@ my $DEBUG = 0;
 #
 # Startup initialization
 #
-my $taskdir = "";
+my $taskdir = undef;
+my $weekdir = undef;
+
 if (defined $ENV{HOME}) {
     $taskdir = $ENV{HOME} . "/tasklogs/";
+    $weekdir = $taskdir . "weeklogs/";
 } elsif (defined $ENV{HOMEDRIVE} && defined $ENV{HOMEPATH}) {
     $taskdir = $ENV{HOMEDRIVE} . $ENV{HOMEPATH} . "tasklogs\\";
+    $weekdir = $taskdir . "weeklogs\\";
 } else {
     die "HOME or (HOMEDRIVE and HOMEPATH) environment variables not set\n";
 }
 my $logfn = $taskdir . '.hours';
-my $weekdir = $taskdir . "weeklogs\\";
 my $outfile;
 
 my $arg1 = shift @ARGV;
-die "\nERROR: Usage:\n\nweekly.pl [-v] MMDDYY\n\tMMDDYY is Saturday week ending date\n\t-v for viewing previous weekly report\nweekly.pl clear\n\n" unless defined( $arg1 );
-
-my $arg2 = shift @ARGV if ( $arg1 =~ /^-/ );
-
-print "DEBUG: program entry\n" if ( $DEBUG );
-print "DEBUG: arg1='$arg1'\n" if ( $DEBUG );
-print "DEBUG: arg2='$arg2'\n" if ( $DEBUG );
-
-if ( $arg1 eq '-v' ) {
-    $outfile = $arg2;
-} else {
+my $arg2 = undef;
+if ( !defined( $arg1 ) ) {
+    # Get the current date
+    (undef,undef,undef,$mday,$mon,$year,$wday,undef,undef) = localtime(time);
+    # Adjust $mon to be in the 1-12 range
+    $mon++;
+    # Adjust $mday to be Saturday
+    $mday    += (6 - $wday);
+    # Adjust $year for years >= 2000
+    $year -= 100 if ( $year >= 100 );
+    # Adjust $mon, $mday, and $year to be 2-digit numeric strings
+    $mon     =  sprintf( "%2.2d", $mon );
+    $mday    =  sprintf( "%2.2d", $mday );
+    $year    =  sprintf( "%2.2d", $year );
+    $arg1    = "$mon$mday$year";
     $outfile = $arg1;
+} elsif ( $arg1 eq '-v' ) {
+    $arg2 = shift @ARGV if ( $arg1 =~ /^-/ );
+    $outfile = $arg2;
+} elsif ( $arg1 eq 'clear' ) {
+    # TODO: this is a bad hack, reusing this variable, so fix it at some point
+    $outfile = $arg1;
+} else {
+    die "\nERROR: Usage:\n\nweekly.pl [-v] MMDDYY\n\tMMDDYY is Saturday week ending date\n\t-v for viewing previous weekly report\nweekly.pl clear\n\n";
 }
 
 my %time = (
