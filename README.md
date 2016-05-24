@@ -1,3 +1,7 @@
+A set of scripts written over a decade ago to help create weekly timesheets.
+They were tweaked here-and-there during brief periods of down-time for a few years.
+Their current state is... unknown.  Putting here as they might be useful to someone.
+
 # NAME
 
 **task** - time tracking tool
