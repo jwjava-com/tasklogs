@@ -17,6 +17,7 @@ either Cygwin or Linux.
 - Add better handling of incorrect parameters
 - Expand documentation
 - Port to other languages
+- Auto-create necessary paths & allow specifying different paths
 
 ## NAME
 
