@@ -126,6 +126,8 @@ if ($task eq $quit) {
         # %f rounds to nearest
         printf "%3.1f  %s\n", $tot / 3600, $task;
     }
+    my $daily = $taskdir . 'daily.pl';
+    print `perl $daily end`;
     rename $logfn, "$logfn.bak"
         or die "$logfn.bak: $!\n";
 }
