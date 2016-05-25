@@ -1,20 +1,18 @@
 #!/usr/bin/perl -w
 # vim: ts=4 sw=4 et
 
-# SYNTAX: weekly.pl (MMDDYY)
+# SYNTAX: weekly.pl (YYMMDD)
 #
-#         Where MMDDYY is the Saturday Week Ending Date
+#         Where YYMMDD is the Saturday Week Ending Date
 #
 # Reads from five (5) input files:
 #    .Monday, .Tuesday, .Wednesday, .Thursday, .Friday
 #
-# Outputs to file MMDDYY.log
+# Outputs to file YYMMDD.log in the weeklogs directory
 ######################################################################
+# TODO: clean up the debug statements
 my $DEBUG = 0;
 
-#
-# Startup initialization
-#
 my $taskdir = undef;
 my $weekdir = undef;
 
@@ -29,6 +27,20 @@ if (defined $ENV{HOME}) {
 }
 my $logfn = $taskdir . '.hours';
 my $outfile;
+
+my %time = (
+    Monday    => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
+    Tuesday   => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
+    Wednesday => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
+    Thursday  => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
+    Friday    => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
+    Saturday  => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
+    Sunday    => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
+    Week      => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" }
+);
+my %tasks;
+my $temp_time = 0.0;
+my $temp_task = '';
 
 my $arg1 = shift @ARGV;
 my $arg2 = undef;
@@ -45,44 +57,23 @@ if ( !defined( $arg1 ) ) {
     $mon     =  sprintf( "%2.2d", $mon );
     $mday    =  sprintf( "%2.2d", $mday );
     $year    =  sprintf( "%2.2d", $year );
-    $arg1    = "$mon$mday$year";
+    $arg1    = "$year$mon$mday";
     $outfile = $arg1;
 } elsif ( $arg1 eq '-v' ) {
     $arg2 = shift @ARGV if ( $arg1 =~ /^-/ );
     $outfile = $arg2;
 } elsif ( $arg1 eq 'clear' ) {
-    # TODO: this is a bad hack, reusing this variable, so fix it at some point
-    $outfile = $arg1;
+    &clear_daily_files();
+    exit;
 } else {
-    die "\nERROR: Usage:\n\nweekly.pl [-v] MMDDYY\n\tMMDDYY is Saturday week ending date\n\t-v for viewing previous weekly report\nweekly.pl clear\n\n";
+    die "\nERROR: Usage:\n\nweekly.pl [-v] YYMMDD\n\tYYMMDD is Saturday week ending date\n\t-v for viewing previous weekly report\nweekly.pl clear\n\n";
 }
-
-my %time = (
-    Monday    => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
-    Tuesday   => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
-    Wednesday => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
-    Thursday  => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
-    Friday    => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
-    Week      => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" }
-);
-my %tasks;
-my $temp_time = 0.0;
-my $temp_task = '';
 
 print "DEBUG: before if blocks\n" if ( $DEBUG );
 print "DEBUG: outfile='$outfile'\n" if ( $DEBUG );
 
-if ( $outfile eq 'clear' ) {
-    print "DEBUG: in clear block\n" if ( $DEBUG );
-
-    foreach $day ( keys %time ) {
-        if ( -e "$taskdir.$day" && open( CLEAR, ">$taskdir.$day" ) ) {
-            print "Clearing $taskdir.$day\n";
-            close( CLEAR );
-        }
-    }
-}
-elsif ( $arg1 ne '-v' ) {
+# TODO: change this to be handled differently
+if ( $arg1 ne '-v' ) {
     print "DEBUG: in ne -v block\n" if ( $DEBUG );
 
     $outfile .= '.log';
@@ -170,49 +161,65 @@ elsif ( $arg1 ne '-v' ) {
     print  OUTFILE "========================================\n";
     print  OUTFILE "BACKUP OF DAILY LOG FILES\n";
     print  OUTFILE "========================================\n";
-    print OUTFILE "-----MON-----\n";
-    print OUTFILE $time{Monday}{file};
-    print OUTFILE "-----TUE-----\n";
-    print OUTFILE $time{Tuesday}{file};
-    print OUTFILE "-----WED-----\n";
-    print OUTFILE $time{Wednesday}{file};
-    print OUTFILE "-----THU-----\n";
-    print OUTFILE $time{Thursday}{file};
-    print OUTFILE "-----FRI-----\n";
-    print OUTFILE $time{Friday}{file};
+    print  OUTFILE "-----MON-----\n";
+    print  OUTFILE $time{Monday}{file};
+    print  OUTFILE "-----TUE-----\n";
+    print  OUTFILE $time{Tuesday}{file};
+    print  OUTFILE "-----WED-----\n";
+    print  OUTFILE $time{Wednesday}{file};
+    print  OUTFILE "-----THU-----\n";
+    print  OUTFILE $time{Thursday}{file};
+    print  OUTFILE "-----FRI-----\n";
+    print  OUTFILE $time{Friday}{file};
 
     close( OUTFILE );
     chmod( 0444, "$weekdir$outfile" );
 }
-
-print "DEBUG: between if blocks\n" if ( $DEBUG );
+print "DEBUG: after ne -v if block\n" if ( $DEBUG );
 print "DEBUG: outfile='$outfile'\n" if ( $DEBUG );
 
-if ( $outfile ne 'clear' ) {
-    print "DEBUG: in ne clear block\n" if ( $DEBUG );
+if ( $outfile !~ /\.log$/ ) {
+    $outfile .= '.log';
+}
+print "DEBUG: after adjusting filename\n" if ( $DEBUG );
+print "DEBUG: outfile='$outfile'\n" if ( $DEBUG );
 
-    if ( $outfile !~ /\.log$/ ) {
-        $outfile .= '.log';
-    }
-    print "DEBUG: after adjusting filename\n" if ( $DEBUG );
-    print "DEBUG: outfile='$outfile'\n" if ( $DEBUG );
+print "DEBUG: checking readability of outfile\n" if ( $DEBUG );
+if ( ! -r "$weekdir$outfile" ) {
+    die "ERROR: File not readable: $weekdir$outfile\n\n";
+}
+print "DEBUG: outfile is readable, we didn't die\n" if ( $DEBUG );
 
-    print "DEBUG: checking readability of outfile\n" if ( $DEBUG );
-    if ( ! -r "$weekdir$outfile" ) {
-        die "ERROR: File not readable: $weekdir$outfile\n\n";
-    }
-    print "DEBUG: outfile is readable, we didn't die\n" if ( $DEBUG );
+# Display the week's report
+print "\n";
+print "DEBUG: opening outfile: '$weekdir$outfile'\n" if ( $DEBUG );
+open( WEEKFILE, "$weekdir$outfile" ) or die "ERROR: Can't open $weekdir$outfile\n\n";
+print "DEBUG: outfile now open, if we're here we didn't die\n" if ( $DEBUG );
+while ( <WEEKFILE> ) {
+    print $_;
+}
+close( WEEKFILE );
+print "\n";
 
-    # Display the week's report
-    print "\n";
-    print "DEBUG: opening outfile: '$weekdir$outfile'\n" if ( $DEBUG );
-    open( WEEKFILE, "$weekdir$outfile" ) or die "ERROR: Can't open $weekdir$outfile\n\n";
-    print "DEBUG: outfile now open, if we're here we didn't die\n" if ( $DEBUG );
-    while ( <WEEKFILE> ) {
-        print $_;
+######################################################################
+exit; # End of main script ###########################################
+######################################################################
+
+######################################################################
+# Clear the daily log files (by deletion)
+#
+# TODO: pull this out into a tasklogs suite module.
+#
+sub clear_daily_files() {
+    print "DEBUG: in clear function\n" if ( $DEBUG );
+
+    foreach $day ( keys %time ) {
+        my $daily_file = "$taskdir.$day";
+        if ( -e "$daily_file" ) {
+            print "Removing $daily_file\n";
+            unlink "$daily_file" or die "Could not remove $daily_file: $!\n";
+        }
     }
-    close( WEEKFILE );
-    print "\n";
 }
 
 __END__
@@ -227,7 +234,7 @@ B<weekly> - weekly report generator
 
 =item B<weekly>
 
-=item B<weekly> MMDDYY Where is Saturday week ending date
+=item B<weekly> YYMMDD Where is Saturday week ending date
 
 =item B<weekly> -v for viewing previous weekly report
 
