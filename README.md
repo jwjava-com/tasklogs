@@ -12,13 +12,20 @@ either Cygwin or Linux.
 
 ## TODOS
 
-- `weekly.pl`: Auto-calculate Saturday date if none specified
+- ~~(done) `weekly.pl`: Auto-calculate Saturday date if none specified~~
 - Extract common code to a module
-- Add better handling of incorrect parameters
+- Add better handling of incorrect command-line parameters
 - Expand documentation
-- Port to other languages
-- Auto-create necessary paths & allow specifying different paths
-- Handle spaces inside quoted task names
+- Port to other languages (spoken & programming)
+- (started) Auto-create necessary paths & allow specifying different paths
+- ~~(done) Handle spaces inside quoted task names~~
+- Allow changing back to the previous (or previous X) task (ala bash !! or !-n)
+- Allow resuming a day after a previous 'quit'
+- Add configurable list (or file) of tasks to be treated same as 'break'
+- (started, done in `task.pl`) Handle ending a day after midnight
+- (started, done in `task.pl`) Update to allow changing rounding/output
+- Change end-of-day files to always store raw seconds totals, to improve week-end numbers
+- ~~(done) Rename end-of-week files from MMDDYY to YYMMDD~~
 
 ## NAME
 
