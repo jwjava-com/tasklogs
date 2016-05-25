@@ -3,6 +3,7 @@
 
 use Time::Local;
 use English;
+use Lingua::EN::Titlecase;
 
 #
 # Startup initialization
@@ -15,6 +16,11 @@ if (defined $ENV{HOME}) {
 } else {
     die "HOME or (HOMEDRIVE and HOMEPATH) environment variables not set\n";
 }
+die "$taskdir does not exist" unless ( -d $taskdir );
+die "$taskdir is not accessable" unless ( -x $taskdir );
+die "$taskdir is not readable" unless ( -r $taskdir );
+die "$taskdir is not writable" unless ( -w $taskdir );
+
 my $logfn = $taskdir . '.hours';
 
 my $option    = shift @ARGV;
@@ -28,19 +34,15 @@ my $currtime  = timelocal( localtime(time) );
 my ($totaltime, $breaktime, $worktime) = (0.0, 0.0, 0.0);
 my ($total, $breaks, $worked)          = (0.0, 0.0, 0.0);
 my ($mon, $mday, $year, $wday);
-my @days = qw(Sunday Monday Tuesday Wednesday Thursday Friday Saturday);
-my $currday;
-my $filename;
 my $startday;
 my $endday;
 my @startofday;
 my @endofday;
 my $linenumber = 0;  # Current line number of input file
+my $tc = Lingua::EN::Titlecase->new("");
 
 # Get the current date
 (undef,undef,undef,$mday,$mon,$year,$wday,undef,undef) = localtime(time);
-# Set $currday to be text string for the current date
-$currday =  $days[$wday];
 # Adjust $mon to be in the 1-12 range
 $mon++;
 # Adjust $mday to be Saturday
@@ -57,18 +59,12 @@ $year    =  sprintf( "%2.2d", $year );
 # log to a file and doing 'weekly' actions on certain days of the week.
 # Otherwise, just print the 'daily' report to the screen.
 if ( defined( $option ) && $option eq 'end' ) {
-    # Store the end-of-day report to a log file
-    $filename = "$taskdir.$currday";
-    my $task = $taskdir . 'task.pl';
-    `perl $task quit > $filename`;
+    my $currday = &get_currday();
+    my $filename = "$taskdir.$currday";
 
-    if ( -e $filename && open( LOG, "$filename" ) ) {
-        # Display the log file for the user to examine.
-        while ( <LOG> ) {
-            print $_;
-        }
-        close( LOG );
-
+    if ( -e $filename ) {
+        # NOTE: This assumes we reached this point from a call to `task.pl quit`
+        #       which outputs the end-of-day log for us.
         # Prompt the user for whether the log file looks good, if not
         # open the logfile into a text editor (e.g., vim).
         print "\n\nEdit [y|n]? ";
@@ -81,7 +77,7 @@ if ( defined( $option ) && $option eq 'end' ) {
 
     # If it's the end of the week, run the weekly report then clear out the
     # end-of-day logs for the week.
-    if ( $currday eq 'Friday' ) {
+    if ( $wday == 5 ) {
         # Prompt the user for whether the weekly report should be ran.
         print "\n\nProcess Weekly Report [y|n]? ";
         my $doWeek;
@@ -104,8 +100,8 @@ else {
         while ( <INPUT> ) {
             chomp;
             ( $temp_time, $temp_task ) = split( /\s+/, $_, 2 );
-            $tasks[$ctr++]             = [ $temp_time, $temp_task ];
-            $startday                  = $temp_time if ( $linenumber == 0 );
+            $tasks[$ctr++] = [ $temp_time, $tc->title("$temp_task") ];
+            $startday      = $temp_time if ( $linenumber == 0 );
             $linenumber++;
         }
         close( INPUT );
@@ -116,18 +112,17 @@ else {
         $numtasks      = scalar( @tasks );
         if ( $numtasks > 1 ) {
             while ( $ctr < $numtasks ) {
-                $temp_task = $tasks[$ctr][1]
-                    unless( !defined( $tasks[$ctr][1] ) );
-                $temp_time1 = $tasks[$ctr][0]
-                    unless( !defined( $tasks[$ctr][0] ) );
+                $temp_task = $tasks[$ctr][1] unless( !defined( $tasks[$ctr][1] ) );
+                $temp_time1 = $tasks[$ctr][0] unless( !defined( $tasks[$ctr][0] ) );
+
+                # TODO: bump all these out to a config file or array
                 if ( $temp_task =~ /break/i ||
                      $temp_task =~ /lunch/i ||
                      $temp_task =~ /sick/i ||
                      $temp_task =~ /vacation/i ||
                      $temp_task =~ /holiday/i )
                 {
-                    $temp_time2 = $tasks[$ctr+1][0]
-                        unless( !defined($tasks[$ctr+1][0]) );
+                    $temp_time2 = $tasks[$ctr+1][0] unless( !defined($tasks[$ctr+1][0]) );
                     $breaktime += $temp_time2 - $temp_time1;
                 }
                 else {
@@ -163,7 +158,27 @@ else {
     }
 }
 
+######################################################################
+exit; # End of main script ###########################################
+######################################################################
+
+######################################################################
+# Get the name of the current day
+#
+# TODO: pull this out into a tasklogs suite module.
+#
+sub get_currday() {
+    my $wday;
+    my @days = qw(Sunday Monday Tuesday Wednesday Thursday Friday Saturday);
+    (undef,undef,undef,undef,undef,undef,$wday,undef,undef) = localtime(time);
+    return $days[$wday];
+}
+
+######################################################################
 # Format Time Array Values as 2-digit values
+#
+# TODO: pull this out into a tasklogs suite module.
+#
 sub fmttimearr( \@ ) {
     my $timearr = shift;
     my $timestr;
@@ -207,7 +222,9 @@ sub fmttimearr( \@ ) {
     return $timestr;
 }
 
+######################################################################
 # Redo $time as either hours, minutes, or seconds
+#
 sub redotime( $ ) {
     my $time = shift;
     my $desc = "";
@@ -226,7 +243,9 @@ sub redotime( $ ) {
     return ($time, $desc);
 }
 
+######################################################################
 # Print the time report
+#
 sub printreport( $$$$$ ) {
     my $worktime  = shift || 0;
     my $breaktime = shift || 0;
