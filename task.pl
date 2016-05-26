@@ -126,7 +126,7 @@ if (defined $prev) {
         print "Doing [$prev], $min minutes, started at $startprev\n";
         exit;
     }
-    elsif ($task eq $prev) {
+    elsif (lc($task) eq lc($prev)) {
         print "Already doing [$prev], $min minutes, started at $startprev\n";
         exit;
     }
@@ -134,6 +134,9 @@ if (defined $prev) {
         print "Was doing [$prev], $min minutes\n";
     }
 }
+# If 1st run of the day (e.g., no $prev) and we gave no $task, exit
+# Really we shouldn't ever reach this point, but... it's here, so (shrugs)
+# aka: I don't remember from back in 1999-2004 when I first wrote this why I needed this check.
 elsif (!defined $task) {
     exit;
 }
