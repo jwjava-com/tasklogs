@@ -11,12 +11,13 @@ use POSIX qw(isdigit);
 use Math::Round qw(nearest);
 use Sort::Hash qw(sort_hash);
 use Lingua::EN::Titlecase;
+use DateTime;
 
 # change at your own risk -- some of the other scripts might not be forgiving
-my $tasklogs_dirname = 'tasklogs';    # main directory for all tasklogs
-my $tasklog_filename = '.hours';      # task log file, stored in $tasklogs_dirname
+my $tasklogs_dirname   = 'tasklogs';  # main directory for all tasklogs
+my $tasklog_filename   = '.hours';    # task log file, stored in $tasklogs_dirname
 my $tasklogs_backupdir = 'backups';   # subdirectory of $tasklogs_dirname
-my $quit = 'quit';                    # pseudo-taskname used to end the day
+my $quit               = 'quit';      # pseudo-taskname used to end the day
 
 # ====================================================================
 # TODO: Set these to control output.
@@ -24,17 +25,17 @@ my $quit = 'quit';                    # pseudo-taskname used to end the day
 # By default this will output values rounded to nearest quarter hour:
 my $rounding_precision = 0.25;
 my $seconds_conversion = 3600; # seconds to hours
-my $printf_fmt = "%5.2f";
+my $printf_fmt         = "%5.2f";
 #
 # If you need output by tenth of an hour, use these values:
 # my $rounding_precision = 0.1;
 # my $seconds_conversion = 3600; # seconds to hours
-# my $printf_fmt = "%5.1f";
+# my $printf_fmt         = "%5.1f";
 #
 # If you need output in minutes, rounded to nearest minute:
 # my $rounding_precision = 1;
 # my $seconds_conversion = 60; # seconds to minutes
-# my $printf_fmt = "%5.0f";
+# my $printf_fmt         = "%5.0f";
 # #====================================================================
 
 #
@@ -151,14 +152,16 @@ close OUTFILE;
 # TODO: move this to a sub-routine
 #
 if (lc("$task") eq lc("$quit")) {
+    my $tz = DateTime::TimeZone->new( name => "local" );
+    my $dt = DateTime->now( time_zone => $tz->name() );
     my $eod_filename = &get_endofday_filename();
     open( EODFH, ">$eod_filename") or die "Could not open $eod_filename for writing";
 
     my %rounded;
     foreach my $tsk (keys %totals) {
         my $r = nearest( $rounding_precision, $totals{"$tsk"} / $seconds_conversion );
-        $r = abs $r if ( $r == 0 ); # get rid of annoying -0.00 values
-        $tsk = $tc->title("$tsk");
+        $r    = abs $r if ( $r == 0 ); # get rid of annoying -0.00 values
+        $tsk  = $tc->title("$tsk");
         $rounded{"$tsk"} = $r;
     }
 
@@ -199,10 +202,7 @@ exit; # End of main script ###########################################
 # TODO: pull this out into a tasklogs suite module.
 #
 sub get_daily_script() {
-    my $taskdir = &get_taskdir();
-
-    my $daily_script = $taskdir . 'daily.pl';
-    return $daily_script;
+    return &get_taskdir() . 'daily.pl';
 }
 
 ######################################################################
@@ -210,12 +210,11 @@ sub get_daily_script() {
 #
 # TODO: pull this out into a tasklogs suite module.
 #
-sub get_currday_name() {
-    my @days = qw(Sunday Monday Tuesday Wednesday Thursday Friday Saturday);
+sub get_currday_name($;) {
+    my $tz = DateTime::TimeZone->new( name => "local" );
+    my $dt = DateTime->now( time_zone => $tz->name() );
 
-    my (undef,undef,undef,undef,undef,undef,$wday,undef,undef) = localtime(time);
-
-    return $days[$wday];
+    return $dt->day_name();
 }
 
 ######################################################################
@@ -224,17 +223,12 @@ sub get_currday_name() {
 # TODO: pull this out into a tasklogs suite module.
 #
 sub get_prevday_name() {
-    my @days = qw(Sunday Monday Tuesday Wednesday Thursday Friday Saturday);
+    my $tz = DateTime::TimeZone->new( name => "local" );
+    my $dt = DateTime->now( time_zone => $tz->name() );
 
-    my (undef,undef,undef,undef,undef,undef,$wday,undef,undef) = localtime(time);
+    $dt->subtract( days => 1 );
 
-    if ( $wday == 0 ) {
-        $wday = scalar(@days) - 1;
-    } else {
-        $wday--;
-    }
-
-    return $days[$wday];
+    return $dt->day_name();
 }
 
 ######################################################################
@@ -243,20 +237,10 @@ sub get_prevday_name() {
 # TODO: pull this out into a tasklogs suite module.
 #
 sub get_currday_yymmdd() {
-    my (undef,undef,undef,$mday,$mon,$year,$wday,undef,undef) = localtime(time);
+    my $tz = DateTime::TimeZone->new( name => "local" );
+    my $dt = DateTime->now( time_zone => $tz->name() );
 
-    # Adjust $mon to be in the 1-12 range
-    $mon++;
-    # Adjust $mday to be Saturday
-    $mday    += (6 - $wday);
-    # Adjust $year for years >= 2000
-    $year -= 100 if ( $year >= 100 );
-    # Adjust $mon, $mday, and $year to be 2-digit numeric strings
-    $mon     =  sprintf( "%2.2d", $mon );
-    $mday    =  sprintf( "%2.2d", $mday );
-    $year    =  sprintf( "%2.2d", $year );
-
-    return "$year$mon$mday";
+    return $dt->format_cldr( "yyMMdd" );
 }
 
 ######################################################################
@@ -265,20 +249,12 @@ sub get_currday_yymmdd() {
 # TODO: pull this out into a tasklogs suite module.
 #
 sub get_prevday_yymmdd() {
-    my (undef,undef,undef,$mday,$mon,$year,$wday,undef,undef) = localtime(time);
+    my $tz = DateTime::TimeZone->new( name => "local" );
+    my $dt = DateTime->now( time_zone => $tz->name() );
 
-    # Adjust $mon to be in the 1-12 range
-    $mon++;
-    # Adjust $mday to be Saturday
-    $mday    += (6 - $wday);
-    # Adjust $year for years >= 2000
-    $year -= 100 if ( $year >= 100 );
-    # Adjust $mon, $mday, and $year to be 2-digit numeric strings
-    $mon     =  sprintf( "%2.2d", $mon );
-    $mday    =  sprintf( "%2.2d", $mday );
-    $year    =  sprintf( "%2.2d", $year );
+    $dt->subtract( days => 1 );
 
-    return "$year$mon$mday";
+    return $dt->day();
 }
 
 ######################################################################
@@ -287,10 +263,12 @@ sub get_prevday_yymmdd() {
 # TODO: pull this out into a tasklogs suite module.
 #
 sub get_endofday_filename() {
-    my $taskdir = &get_taskdir();
+    my $tz = DateTime::TimeZone->new( name => "local" );
+    my $dt = DateTime->now( time_zone => $tz->name() );
 
+    my $taskdir = &get_taskdir();
     my $currday = &get_currday_name();
-    my $eod = "$taskdir.$currday";
+    my $eod     = "$taskdir.$currday";
 
     if ( ! -f "$eod" ) {
         my $prevday = &get_prevday_name();
@@ -307,31 +285,7 @@ sub get_endofday_filename() {
 #
 sub backup_logfn($;) {
     my $logfn = shift;
-    my $taskdir = &get_taskdir();
-
-    my $bakdir = "$taskdir" . "$tasklogs_backupdir";
-    # TODO: change this to something more robust for determining path separators
-    if (defined $ENV{HOME}) {
-        $bakdir .= "/";
-    } elsif (defined $ENV{HOMEDRIVE} && defined $ENV{HOMEPATH}) {
-        $bakdir .= "\\";
-    } else {
-        die "HOME or (HOMEDRIVE and HOMEPATH) environment variables not set\n";
-    }
-
-    if ( ! -d "$bakdir" ) {
-        mkdir "$bakdir" or die "$bakdir could not be created: $!";
-    }
-    die "$bakdir is not accessable" unless ( -x $bakdir );
-    die "$bakdir is not readable" unless ( -r $bakdir );
-    die "$bakdir is not writable" unless ( -w $bakdir );
-
-    my $bakfn = "$bakdir" . "";
-
-    rename "$logfn", "$bakfn";
-
-    rename $logfn, "$logfn.bak"
-        or die "$logfn.bak: $!\n";
+    rename $logfn, "$logfn.bak" or die "$logfn.bak: $!\n";
 }
 
 ######################################################################
@@ -354,8 +308,8 @@ sub get_taskdir() {
         mkdir "$taskdir" or die "$taskdir could not be created: $!";
     }
     die "$taskdir is not accessable" unless ( -x $taskdir );
-    die "$taskdir is not readable" unless ( -r $taskdir );
-    die "$taskdir is not writable" unless ( -w $taskdir );
+    die "$taskdir is not readable"   unless ( -r $taskdir );
+    die "$taskdir is not writable"   unless ( -w $taskdir );
 
     return $taskdir;
 }
@@ -413,10 +367,10 @@ sub fmttimearr( \@ ) {
     $$timearr[5] = sprintf( "%2.2d", $$timearr[5] );
 
     # Construct the formated time string
-    $timestr      = join( '/', $$timearr[4], $$timearr[3], $$timearr[5] );
-    $timestr     .= ' ';
-    $timestr     .= join( ':', $$timearr[2], $$timearr[1], $$timearr[0] );
-    $timestr     .= " $ampm";
+    $timestr  = join( '/', $$timearr[4], $$timearr[3], $$timearr[5] );
+    $timestr .= ' ';
+    $timestr .= join( ':', $$timearr[2], $$timearr[1], $$timearr[0] );
+    $timestr .= " $ampm";
 
     return $timestr;
 }
