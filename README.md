@@ -26,6 +26,8 @@ either Cygwin or Linux.
 - (started, done in `task.pl`) Update to allow changing rounding/output
 - Change end-of-day files to always store raw seconds totals, to improve week-end numbers
 - ~~(done) Rename end-of-week files from MMDDYY to YYMMDD~~
+- Fix prompting to edit end-of-day log file
+- Add option for renaming the current task: `task.pl -r "new task"` or `task.pl --rename "new task"`
 
 ## NAME
 
