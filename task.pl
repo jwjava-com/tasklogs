@@ -105,6 +105,20 @@ elsif ($ARGV[0] =~ /^\+[\d.]+$/) {
 # task taskname, or task quit
 else {
     if (defined $ARGV[0]) {
+        # warning to potential mistake (forgetting the -/+)
+        if ($ARGV[0] =~ /^[\d.]+$/) {
+            print STDERR "Warning: You specified a number as the 1st word of the task name.\n";
+            print STDERR "         Did you mean to provide a time offset instead?\n";
+        }
+        # task -r oldname newname
+        elsif ($ARGV[0] =~ /^-r$/ && defined $ARGV[1] && defined $ARGV[2]) {
+            die "Error: Too many parameters, task names with spaces must be quoted\n" if (defined $ARGV[3]);
+            shift; # ignore '-r'
+            my $oldtask = shift;
+            my $newtask = shift;
+            &rename_task( $logfn, $oldtask, $newtask );
+            exit;
+        }
         $task = join( ' ', @ARGV );
     } else {
         $task = undef;
@@ -289,6 +303,44 @@ sub get_endofday_filename() {
 sub backup_logfn($;) {
     my $logfn = shift;
     rename $logfn, "$logfn.bak" or die "$logfn.bak: $!\n";
+}
+
+######################################################################
+# Renames all tasks in $logfn named $oldtask to $newtask.
+#
+# TODO: pull this out into a tasklogs suite module.
+#
+sub rename_task($$$;) {
+    my $logfn   = shift;
+    my $oldtask = shift;
+    my $newtask = shift;
+    my $count   = 0;
+
+    if ( -f "$logfn" ) {
+        open( INFILE, "<$logfn" ) or die "Could not open $logfn for input: $!\n";
+        open( OUTFILE, ">$logfn.tmp" ) or die "Could not open $logfn.tmp for output: $!\n";
+        while (<INFILE>) {
+            if ( $_ =~ s/$oldtask/$newtask/i ) {
+                $count++;
+            }
+            print OUTFILE $_;
+        }
+        close INFILE;
+        close OUTFILE;
+        rename "$logfn.tmp", "$logfn" or die "Could not rename $logfn.tmp to $logfn: $!\n";
+    } else {
+        print STDERR "Warning: task log file $logfn not found\n";
+    }
+
+    if ( $count > 0 ) {
+        print "Done: [$count] instance"
+              . ($count>1?'s':'')
+              . " of [$oldtask] "
+              . ($count>1?'have':'has')
+              . " been renamed to [$newtask].\n";
+    } else {
+        print "Done: No instances of [$oldtask] were found.\n";
+    }
 }
 
 ######################################################################

@@ -27,7 +27,7 @@ either Cygwin or Linux.
 - Change end-of-day files to always store raw seconds totals, to improve week-end numbers
 - ~~(done) Rename end-of-week files from MMDDYY to YYMMDD~~
 - Fix prompting to edit end-of-day log file
-- Add option for renaming the current task: `task.pl -r "new task"` or `task.pl --rename "new task"`
+- ~~(done) Add option for renaming the current task: `task.pl -r "new task"` or `task.pl --rename "new task"`~~
 
 ***
 
@@ -40,6 +40,7 @@ either Cygwin or Linux.
 - **`task.pl`**
 - **`task.pl`** _taskname_
 - **`task.pl`** -_minutes_ _taskname_
+- **`task.pl`** -r _"old taskname"_ _"new taskname"_
 - **`task.pl`** _quit_
 
 ## DESCRIPTION
@@ -56,6 +57,11 @@ If you forget to do this when you switch tasks, use
 **`task.pl`** -_minutes_ _taskname_
 to indicate that you started working on task _taskname_,
 _minutes_ minutes ago.
+
+Use
+**`task.pl`** -r _"old taskname"_ _"new taskname"_
+to rename all instances of _"old taskname"_ to _"new taskname"_.
+If tasknames contain spaces, they must be quoted in this call.
 
 **`task.pl`** _quit_
 rotates its log file and prints a report,
