@@ -5,9 +5,6 @@ use Time::Local;
 use English;
 use Lingua::EN::Titlecase;
 
-#
-# Startup initialization
-#
 my $taskdir = "";
 if (defined $ENV{HOME}) {
     $taskdir = $ENV{HOME} . "/tasklogs/";
@@ -22,6 +19,7 @@ die "$taskdir is not readable" unless ( -r $taskdir );
 die "$taskdir is not writable" unless ( -w $taskdir );
 
 my $logfn = $taskdir . '.hours';
+my @break_aliases = &get_break_aliases( $taskdir . '.break_aliases' );
 
 my $option    = shift @ARGV;
 my $temp_task = "";
@@ -55,8 +53,8 @@ $mday    =  sprintf( "%2.2d", $mday );
 $year    =  sprintf( "%2.2d", $year );
 
 # Check the command-line options and perform the appropriate action:
-# If the option was 'end', perform the end-of-day activities, storing the daily
-# log to a file and doing 'weekly' actions on certain days of the week.
+# If the option was 'end', perform the end-of-day activities, doing 'weekly'
+# actions on certain days of the week.
 # Otherwise, just print the 'daily' report to the screen.
 if ( defined( $option ) && $option eq 'end' ) {
     my $currday = &get_currday();
@@ -77,6 +75,7 @@ if ( defined( $option ) && $option eq 'end' ) {
 
     # If it's the end of the week, run the weekly report then clear out the
     # end-of-day logs for the week.
+    # TODO: fix this if you've worked past midnight on Friday
     if ( $wday == 5 ) {
         # Prompt the user for whether the weekly report should be ran.
         print "\n\nProcess Weekly Report [y|n]? ";
@@ -115,13 +114,7 @@ else {
                 $temp_task = $tasks[$ctr][1] unless( !defined( $tasks[$ctr][1] ) );
                 $temp_time1 = $tasks[$ctr][0] unless( !defined( $tasks[$ctr][0] ) );
 
-                # TODO: bump all these out to a config file or array
-                if ( $temp_task =~ /break/i ||
-                     $temp_task =~ /lunch/i ||
-                     $temp_task =~ /sick/i ||
-                     $temp_task =~ /vacation/i ||
-                     $temp_task =~ /holiday/i )
-                {
+                if ( grep /^$temp_task/i, @break_aliases ) {
                     $temp_time2 = $tasks[$ctr+1][0] unless( !defined($tasks[$ctr+1][0]) );
                     $breaktime += $temp_time2 - $temp_time1;
                 }
@@ -135,13 +128,10 @@ else {
             }
         }
 
+        # TODO: bump all these out to a config file or array
         if ( $tasks[$numtasks-1][0] < $currtime ) {
-            if ( $tasks[$numtasks-1][1]=~/break/i ||
-                 $tasks[$numtasks-1][1]=~/lunch/i ||
-                 $tasks[$numtasks-1][1]=~/sick/i ||
-                 $tasks[$numtasks-1][1]=~/vacation/i ||
-                 $tasks[$numtasks-1][1]=~/holiday/i )
-            {
+            my $tsk = $tasks[$numtasks-1][1];
+            if ( grep /^$tsk/i, @break_aliases ) {
                 $breaktime += $currtime - $tasks[$numtasks-1][0];
             }
             else {
@@ -172,6 +162,31 @@ sub get_currday() {
     my @days = qw(Sunday Monday Tuesday Wednesday Thursday Friday Saturday);
     (undef,undef,undef,undef,undef,undef,$wday,undef,undef) = localtime(time);
     return $days[$wday];
+}
+
+######################################################################
+# Returns an array of 'break' aliases.
+# Attempts to read a config file, if file exists uses contents,
+# otherwise uses a set of standard aliases.
+#
+# TODO: pull this out into a tasklogs suite module.
+#
+sub get_break_aliases($;) {
+    my $fn = shift;
+    my @aliases;
+    if ( -f "$fn" ) {
+        if ( open( INPUT, $fn ) ) {
+            while ( <INPUT> ) {
+                chomp;
+                push( @aliases, $_ );
+            }
+            close( INPUT );
+        }
+    } else {
+        # No break_aliases file defined, using standard values
+        push( @aliases, 'Break', 'Lunch', 'Sick', 'Vacation', 'Holiday' );
+    }
+    return @aliases;
 }
 
 ######################################################################

@@ -84,7 +84,7 @@ elsif ($ARGV[0] eq '-?') {
     print STDERR <<"eof";
 Usage:
 task.pl [-<minutesago>|+(minutestoadd)] <taskname>
-\ttaskname values: 'break', 'lunch', 'sick', 'vacation', 'holiday', $quit
+\ttaskname values: user-defined-string, $quit
 eof
     exit;
 }

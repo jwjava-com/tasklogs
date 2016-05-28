@@ -13,9 +13,8 @@
 # TODO: clean up the debug statements
 my $DEBUG = 0;
 
-my $taskdir = undef;
-my $weekdir = undef;
-
+my $taskdir = "";
+my $weekdir = "";
 if (defined $ENV{HOME}) {
     $taskdir = $ENV{HOME} . "/tasklogs/";
     $weekdir = $taskdir . "weeklogs/";
@@ -25,7 +24,17 @@ if (defined $ENV{HOME}) {
 } else {
     die "HOME or (HOMEDRIVE and HOMEPATH) environment variables not set\n";
 }
+die "$taskdir does not exist" unless ( -d $taskdir );
+die "$taskdir is not accessable" unless ( -x $taskdir );
+die "$taskdir is not readable" unless ( -r $taskdir );
+die "$taskdir is not writable" unless ( -w $taskdir );
+die "$weekdir does not exist" unless ( -d $weekdir );
+die "$weekdir is not accessable" unless ( -x $weekdir );
+die "$weekdir is not readable" unless ( -r $weekdir );
+die "$weekdir is not writable" unless ( -w $weekdir );
+
 my $logfn = $taskdir . '.hours';
+my @break_aliases = &get_break_aliases( $taskdir . '.break_aliases' );
 my $outfile;
 
 my %time = (
@@ -100,12 +109,7 @@ if ( $arg1 ne '-v' ) {
                 $tasks{$temp_task} += $temp_time;
                 $time{$day}{total} += $temp_time;
                 $time{Week}{total} += $temp_time;
-                if ( $temp_task =~ /break/i ||
-                     $temp_task =~ /lunch/i ||
-                     $temp_task =~ /sick/i ||
-                     $temp_task =~ /vacation/i ||
-                     $temp_task =~ /holiday/i )
-                {
+                if ( grep /^$temp_task/i, @break_aliases ) {
                     $time{$day}{breaks} += $temp_time;
                     $time{Week}{breaks} += $temp_time;
                 }
@@ -220,6 +224,31 @@ sub clear_daily_files() {
             unlink "$daily_file" or die "Could not remove $daily_file: $!\n";
         }
     }
+}
+
+######################################################################
+# Returns an array of 'break' aliases.
+# Attempts to read a config file, if file exists uses contents,
+# otherwise uses a set of standard aliases.
+#
+# TODO: pull this out into a tasklogs suite module.
+#
+sub get_break_aliases($;) {
+    my $fn = shift;
+    my @aliases;
+    if ( -f "$fn" ) {
+        if ( open( INPUT, $fn ) ) {
+            while ( <INPUT> ) {
+                chomp;
+                push( @aliases, $_ );
+            }
+            close( INPUT );
+        }
+    } else {
+        # No break_aliases file defined, using standard values
+        push( @aliases, 'Break', 'Lunch', 'Sick', 'Vacation', 'Holiday' );
+    }
+    return @aliases;
 }
 
 __END__
