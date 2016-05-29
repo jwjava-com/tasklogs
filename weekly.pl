@@ -52,7 +52,13 @@ my $temp_time = 0.0;
 my $temp_task = '';
 
 my $arg1 = shift @ARGV;
-my $arg2 = undef;
+#my $arg2 = undef;
+my $arg2 = shift @ARGV;
+print "DEBUG: before argument check if\n" if ( $DEBUG );
+print "DEBUG: arg1='$arg1'\n" if ( $DEBUG );
+print "DEBUG: arg2='$arg2'\n" if ( $DEBUG && defined $arg2 );
+print "DEBUG: arg2 is undef\n" if ( $DEBUG && ! defined $arg2 );
+
 if ( !defined( $arg1 ) ) {
     # Get the current date
     (undef,undef,undef,$mday,$mon,$year,$wday,undef,undef) = localtime(time);
@@ -68,6 +74,8 @@ if ( !defined( $arg1 ) ) {
     $year    =  sprintf( "%2.2d", $year );
     $arg1    = "$year$mon$mday";
     $outfile = $arg1;
+} elsif ( $arg1 =~ /^\d{6}$/ ) {
+    $outfile = $arg1;
 } elsif ( $arg1 eq '-v' ) {
     $arg2 = shift @ARGV if ( $arg1 =~ /^-/ );
     $outfile = $arg2;
@@ -75,7 +83,7 @@ if ( !defined( $arg1 ) ) {
     &clear_daily_files();
     exit;
 } else {
-    die "\nERROR: Usage:\n\nweekly.pl [-v] YYMMDD\n\tYYMMDD is Saturday week ending date\n\t-v for viewing previous weekly report\nweekly.pl clear\n\n";
+    die "\nERROR: Usage:\nweekly.pl [-v] YYMMDD\n\tYYMMDD is Saturday week ending date\n\t-v for viewing previous weekly report\nweekly.pl clear\n\n";
 }
 
 print "DEBUG: before if blocks\n" if ( $DEBUG );
