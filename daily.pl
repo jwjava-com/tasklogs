@@ -83,7 +83,7 @@ if ( defined( $option ) && $option eq 'end' ) {
         chomp( $doWeek = <STDIN> );
         if ( $doWeek eq 'Y' || $doWeek eq 'y' ) {
             my $weekly = $taskdir . 'weekly.pl';
-            print `perl $weekly $mon$mday$year`;
+            print `perl $weekly $year$mon$mday`;
             # Prompt the user for whether the daily logs should be cleared.
             print "\n\nClear Daily Logs [y|n]? ";
             my $doClear;
