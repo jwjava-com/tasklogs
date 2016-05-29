@@ -8,7 +8,7 @@
 # Reads from five (5) input files:
 #    .Monday, .Tuesday, .Wednesday, .Thursday, .Friday
 #
-# Outputs to file YYMMDD.log in the weeklogs directory
+# Outputs to file YYMMDD.log in the timesheets directory
 ######################################################################
 # TODO: clean up the debug statements
 my $DEBUG = 0;
@@ -17,10 +17,10 @@ my $taskdir = "";
 my $weekdir = "";
 if (defined $ENV{HOME}) {
     $taskdir = $ENV{HOME} . "/tasklogs/";
-    $weekdir = $taskdir . "weeklogs/";
+    $weekdir = $taskdir . "timesheets/";
 } elsif (defined $ENV{HOMEDRIVE} && defined $ENV{HOMEPATH}) {
     $taskdir = $ENV{HOMEDRIVE} . $ENV{HOMEPATH} . "tasklogs\\";
-    $weekdir = $taskdir . "weeklogs\\";
+    $weekdir = $taskdir . "timesheets\\";
 } else {
     die "HOME or (HOMEDRIVE and HOMEPATH) environment variables not set\n";
 }
