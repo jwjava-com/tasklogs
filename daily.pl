@@ -1,8 +1,11 @@
 #!/usr/bin/perl -w
 # vim: ts=4 sw=4 et
 
-use Time::Local;
-use English;
+######################################################################
+# daily.pl - time tracking tool
+# See end of file for user documentation.
+######################################################################
+
 use Lingua::EN::Titlecase;
 
 my $taskdir = "";
@@ -28,7 +31,7 @@ my @tasks;
 my $ctr       = 0;
 my $numtasks  = 0;
 my $day       = 8 * 60 * 60;
-my $currtime  = timelocal( localtime(time) );
+my $currtime = time;
 my ($totaltime, $breaktime, $worktime) = (0.0, 0.0, 0.0);
 my ($total, $breaks, $worked)          = (0.0, 0.0, 0.0);
 my ($mon, $mday, $year, $wday);
@@ -76,7 +79,7 @@ if ( defined( $option ) && $option eq 'end' ) {
     # If it's the end of the week, run the weekly report then clear out the
     # end-of-day logs for the week.
     # TODO: fix this if you've worked past midnight on Friday
-    if ( $wday == 5 ) {
+    if ( $wday == 5 || $wday == 6 || $wday == 0 ) {
         # Prompt the user for whether the weekly report should be ran.
         print "\n\nProcess Weekly Report [y|n]? ";
         my $doWeek;
@@ -289,4 +292,96 @@ sub printreport( $$$$$ ) {
     }
     printf( "%s\n\n", "---------------------------------------" );
 }
+
+######################################################################
+# End of sub-routines ################################################
+######################################################################
+__END__
+
+=pod
+
+=head1 NAME
+
+C<daily.pl> - daily report generator
+
+=head1 DESCRIPTION
+
+This program generates a daily report of time worked vs breaks taken.
+
+=head1 SYNOPSIS
+
+=over
+
+=item daily.pl
+    display current daily report snapshot
+
+=item daily.pl C<end>
+    create the end-of-day report
+
+=back
+
+=head1 ENVIRONMENT VARIABLES 
+
+Environment variables are used for determining which OS path separator to use.
+
+=over
+
+=item HOME
+    if I<HOME> is found, assume unix-like environment
+
+=item HOMEDRIVE, HOMEPATH
+    if I<HOMEDRIVE> and I<HOMEPATH> are both found, assume Windows
+
+=back
+
+=head1 FILES
+
+=over
+
+=item .hours
+    task log for the current day
+
+=item .C<day-of-week>
+    end of day report for the indicated I<day-of-week> (e.g., C<.Monday>)
+
+=item .break_aliases
+    optional config file, defines I<task names> treated as aliases to I<break>
+
+=back
+
+=head1 REQUIRED SCRIPTS
+
+=over
+
+=item weekly.pl
+    execution is passed to C<weekly.pl> during end-of-day processing
+    if day-of-week is Friday, Saturday, or Sunday
+
+=back
+
+=head1 REQUIRED MODULES
+
+=over
+
+=item L<Lingua::EN::Titlecase>
+
+=back
+
+=head1 AUTHORS
+
+=over
+
+=item Jon Warren C<jon@jonwarren.info>
+
+=back
+
+=head1 GIT REPOSITORY
+
+=over
+
+=item L<https://github.com/jonwarren/tasklogs>
+
+=back
+
+=cut
 
