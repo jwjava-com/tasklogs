@@ -1,17 +1,15 @@
 #!/usr/bin/perl
-# removed "-w" switch to avoid "uninitialized value" warnings from !defined checks
-# vim: ts=4 sw=4 et
-
-#
-# task - time tracking tool
+######################################################################
+# task.pl - time tracking tool
 # See end of file for user documentation.
-#
+######################################################################
+# removed "-w" switch to avoid "uninitialized value" warnings from !defined checks
 
-use POSIX qw(isdigit);
 use Math::Round qw(nearest);
-use Sort::Hash qw(sort_hash);
 use Lingua::EN::Titlecase;
 use DateTime;
+use DateTime::TimeZone;
+use DateTime::Format::Natural;
 
 # change at your own risk -- some of the other scripts might not be forgiving
 my $tasklogs_dirname   = 'tasklogs';  # main directory for all tasklogs
@@ -19,22 +17,24 @@ my $tasklog_filename   = '.hours';    # task log file, stored in $tasklogs_dirna
 my $tasklogs_backupdir = 'backups';   # subdirectory of $tasklogs_dirname
 my $quit               = 'quit';      # pseudo-taskname used to end the day
 
+my ($TENTHS, $QUARTERS, $HALVES, $WHOLE) = (0.1, 0.25, 0.5, 1);
+my ($TO_MINS, $TO_HRS) = (60, 3600);
 # ====================================================================
 # TODO: Set these to control output.
 # #====================================================================
 # By default this will output values rounded to nearest quarter hour:
-my $rounding_precision = 0.25;
-my $seconds_conversion = 3600; # seconds to hours
+my $rounding_precision = $QUARTERS;
+my $seconds_conversion = $TO_HRS;
 my $printf_fmt         = "%5.2f";
 #
 # If you need output by tenth of an hour, use these values:
-# my $rounding_precision = 0.1;
-# my $seconds_conversion = 3600; # seconds to hours
+# my $rounding_precision = $TENTHS;
+# my $seconds_conversion = $TO_HRS;
 # my $printf_fmt         = "%5.1f";
 #
 # If you need output in minutes, rounded to nearest minute:
-# my $rounding_precision = 1;
-# my $seconds_conversion = 60; # seconds to minutes
+# my $rounding_precision = $WHOLE;
+# my $seconds_conversion = $TO_MINS;
 # my $printf_fmt         = "%5.0f";
 # #====================================================================
 
@@ -84,7 +84,9 @@ elsif ($ARGV[0] eq '-?') {
     print STDERR <<"eof";
 Usage:
 task.pl [-<minutesago>|+(minutestoadd)] <taskname>
-\ttaskname values: user-defined-string, $quit
+task.pl quit [<day_of_week>]
+\ttaskname values: user-defined-string
+\tday_of_week values: full name of the day of week (e.g, Friday)
 eof
     exit;
 }
@@ -135,17 +137,17 @@ if (defined $prev) {
 
     $diff = $now - $then;
     $totals{"$prev"} += $diff;
-    $min = int (($diff + 30) / 60);
+    my $min = nearest( $QUARTERS, $diff / $TO_MINS );
     if (!defined $task) {
-        print "Doing [$prev], $min minutes, started at $startprev\n";
+        printf "Doing [%s], %.2f minutes, started at %s\n", $prev, $min, $startprev;
         exit;
     }
     elsif (lc($task) eq lc($prev)) {
-        print "Already doing [$prev], $min minutes, started at $startprev\n";
+        printf "Already doing [%s], %.2f minutes, started at %s\n", $prev, $min, $startprev;
         exit;
     }
     else {
-        print "Was doing [$prev], $min minutes\n";
+        printf "Was doing [%s], %.2f minutes\n", $prev, $min;
     }
 }
 # If 1st run of the day (e.g., no $prev) and we gave no $task, exit
@@ -168,10 +170,8 @@ close OUTFILE;
 #
 # TODO: move this to a sub-routine
 #
-if (lc("$task") eq lc("$quit")) {
-    my $tz = DateTime::TimeZone->new( name => "local" );
-    my $dt = DateTime->now( time_zone => $tz->name() );
-    my $eod_filename = &get_endofday_filename();
+if ( $task =~ /^$quit/i ) {
+    my $eod_filename = &get_endofday_filename( $task );
     open( EODFH, ">$eod_filename") or die "Could not open $eod_filename for writing";
 
     my %rounded;
@@ -187,16 +187,18 @@ if (lc("$task") eq lc("$quit")) {
 
     my $found_zero = 0;
     foreach my $tsk (sort { $rounded{"$b"} <=> $rounded{"$a"} or lc("$a") cmp lc("$b") } keys %rounded) {
-        my $tot = $rounded{"$tsk"};
-        if ( $found_zero == 0 && $tot == 0 ) {
+        my $rounded_total = $rounded{"$tsk"};
+        my $raw_total     = $totals{"$tsk"};
+        if ( $found_zero == 0 && $rounded_total == 0 ) {
             $found_zero = 1;
             print "------------------------------\n";
-        } elsif ( $found_zero == 1 && $tot != 0 ) {
+        } elsif ( $found_zero == 1 && $rounded_total != 0 ) {
             $found_zero = 0;
             print "------------------------------\n";
         }
-        printf "$printf_fmt  %s\n", $tot, $tsk;
-        printf EODFH "$printf_fmt  %s\n", $tot, $tsk;
+        printf "$printf_fmt  %s\n", $rounded_total, $tsk;
+        printf EODFH "$printf_fmt  %s\n", $rounded_total, $tsk;
+        #printf EODFH "$printf_fmt  %s\n", $raw_total, $tsk;
     }
 
     &backup_logfn( $logfn );
@@ -223,76 +225,29 @@ sub get_daily_script() {
 }
 
 ######################################################################
-# Get the name of the current day
-#
-# TODO: pull this out into a tasklogs suite module.
-#
-sub get_currday_name($;) {
-    my $tz = DateTime::TimeZone->new( name => "local" );
-    my $dt = DateTime->now( time_zone => $tz->name() );
-
-    return $dt->day_name();
-}
-
-######################################################################
-# Get the name of the previous day
-#
-# TODO: pull this out into a tasklogs suite module.
-#
-sub get_prevday_name() {
-    my $tz = DateTime::TimeZone->new( name => "local" );
-    my $dt = DateTime->now( time_zone => $tz->name() );
-
-    $dt->subtract( days => 1 );
-
-    return $dt->day_name();
-}
-
-######################################################################
-# Get the numeric YYMMDD for the current day
-#
-# TODO: pull this out into a tasklogs suite module.
-#
-sub get_currday_yymmdd() {
-    my $tz = DateTime::TimeZone->new( name => "local" );
-    my $dt = DateTime->now( time_zone => $tz->name() );
-
-    return $dt->format_cldr( "yyMMdd" );
-}
-
-######################################################################
-# Get the numeric YYMMDD for the previous day
-#
-# TODO: pull this out into a tasklogs suite module.
-#
-sub get_prevday_yymmdd() {
-    my $tz = DateTime::TimeZone->new( name => "local" );
-    my $dt = DateTime->now( time_zone => $tz->name() );
-
-    $dt->subtract( days => 1 );
-
-    return $dt->day();
-}
-
-######################################################################
 # Get the name of the end-of-day log file
 #
 # TODO: pull this out into a tasklogs suite module.
 #
-sub get_endofday_filename() {
-    my $tz = DateTime::TimeZone->new( name => "local" );
-    my $dt = DateTime->now( time_zone => $tz->name() );
-
-    my $taskdir = &get_taskdir();
-    my $currday = &get_currday_name();
-    my $eod     = "$taskdir.$currday";
-
-    if ( ! -f "$eod" ) {
-        my $prevday = &get_prevday_name();
-        $eod = "$taskdir.$prevday";
+sub get_endofday_filename($) {
+    my $task = shift;
+    my $day = undef;
+    ($task, $day) = split( /\s+/, $task, 2 );
+    if ( defined $day ) {
+        my $tz = DateTime::TimeZone->new( name => "local" );
+        my $parser = DateTime::Format::Natural->new( time_zone => $tz->name() );
+        my $dt = $parser->parse_datetime($day);
+        if ( $parser->success() ) {
+            $day = $dt->day_name();
+        } else {
+            die "Could not parse provided day [$day]: " . $parser->error() . "\n";
+        }
+    } else {
+        die "No day provided\n";
     }
 
-    return $eod;
+    my $taskdir = &get_taskdir();
+    return "$taskdir.$day";
 }
 
 ######################################################################
@@ -431,58 +386,111 @@ sub fmttimearr( \@ ) {
 }
 
 ######################################################################
+# End of sub-routines ################################################
 ######################################################################
 __END__
 
+=pod
+
 =head1 NAME
 
-B<task> - time tracking tool
+C<task.pl> - time tracking tool
+
+=head1 DESCRIPTION
+
+This program allows tracking start times of various tasks for timesheets.
 
 =head1 SYNOPSIS
 
 =over
 
-=item B<task>
+=item task.pl
+    display current task
 
-=item B<task> I<taskname>
+=item task.pl C<taskname>
+    start new task named I<taskname>
 
-=item B<task> -I<minutes> I<taskname>
+=item task.pl C<-minutes> C<taskname>
+    start new task I<minutes> ago named I<taskname>
 
-=item B<task quit>
+=item task.pl C<+minutes> C<taskname>
+    start new task I<minutes> from now named I<taskname>
+
+=item task.pl C<quit> C<day-of-week>
+    do end-of-day processing for I<day-of-week>
 
 =back
 
-=head1 DESCRIPTION
+=head1 ENVIRONMENT VARIABLES 
 
-B<task> without arguments says what I<taskname> it thinks
-you're working on and for how long.
+Environment variables are used for determining which OS path separator to use.
 
-Use
-B<task> I<taskname>
-when you start working on task I<taskname>.
-Short, repeatable I<taskname>s are recommended.
+=over
 
-If you forget to do this when you switch tasks, use
-B<task> -I<minutes> I<taskname>
-to indicate that you started working on task I<taskname>,
-I<minutes> minutes ago.
+=item HOME
+    if I<HOME> is found, assume unix-like environment
 
-B<task quit>
-rotates its log file and prints a report,
-listing total hours worked for each distinct I<taskname>.
+=item HOMEDRIVE, HOMEPATH
+    if I<HOMEDRIVE> and I<HOMEPATH> are both found, assume Windows
 
-=head1 ENVIRONMENT
-
-B<HOME> must be set to the path of the user's home directory.
+=back
 
 =head1 FILES
 
 =over
 
-=item C<$HOME/.hours>
+=item .hours
+    task log for the current day
 
-=item C<$HOME/.hours.bak>
+=item .hours.bak
+    task log for the previous day
+
+=item .C<day-of-week>
+    end of day report for the indicated I<day-of-week> (e.g., C<.Monday>)
+
+=back
+
+=head1 REQUIRED SCRIPTS
+
+=over
+
+=item daily.pl
+    execution is passed to C<daily.pl> during end-of-day processing
+
+=back
+
+=head1 REQUIRED MODULES
+
+=over
+
+=item L<Math::Round>
+
+=item L<Lingua::EN::Titlecase>
+
+=item L<DateTime>
+
+=item L<DateTime::TimeZone>
+
+=item L<DateTime::Format::Natural>
+
+=back
+
+=head1 AUTHORS
+
+=over
+
+=item Jon Warren C<jon@jonwarren.info>
+
+=back
+
+=head1 GIT REPOSITORY
+
+=over
+
+=item L<https://github.com/jonwarren/tasklogs>
 
 =back
 
 =cut
+
+# vim: ts=4 sw=4 et
