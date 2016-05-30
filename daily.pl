@@ -1,6 +1,4 @@
 #!/usr/bin/perl -w
-# vim: ts=4 sw=4 et
-
 ######################################################################
 # daily.pl - time tracking tool
 # See end of file for user documentation.
@@ -385,3 +383,4 @@ Environment variables are used for determining which OS path separator to use.
 
 =cut
 
+# vim: ts=4 sw=4 et
