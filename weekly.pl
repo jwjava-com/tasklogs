@@ -1,15 +1,9 @@
 #!/usr/bin/perl -w
-# vim: ts=4 sw=4 et
-
-# SYNTAX: weekly.pl (YYMMDD)
-#
-#         Where YYMMDD is the Saturday Week Ending Date
-#
-# Reads from five (5) input files:
-#    .Monday, .Tuesday, .Wednesday, .Thursday, .Friday
-#
-# Outputs to file YYMMDD.log in the timesheets directory
 ######################################################################
+# weekly.pl - time tracking tool
+# See end of file for user documentation.
+######################################################################
+
 # TODO: clean up the debug statements
 my $DEBUG = 0;
 
@@ -35,9 +29,8 @@ die "$weekdir is not writable" unless ( -w $weekdir );
 
 my $logfn = $taskdir . '.hours';
 my @break_aliases = &get_break_aliases( $taskdir . '.break_aliases' );
-my $outfile;
 
-my %time = (
+my %totals = (
     Monday    => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
     Tuesday   => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
     Wednesday => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
@@ -51,90 +44,101 @@ my %tasks;
 my $temp_time = 0.0;
 my $temp_task = '';
 
-my $arg1 = shift @ARGV;
-#my $arg2 = undef;
-my $arg2 = shift @ARGV;
-print "DEBUG: before argument check if\n" if ( $DEBUG );
-print "DEBUG: arg1='$arg1'\n" if ( $DEBUG );
-print "DEBUG: arg2='$arg2'\n" if ( $DEBUG && defined $arg2 );
-print "DEBUG: arg2 is undef\n" if ( $DEBUG && ! defined $arg2 );
+&printdebug( 1, "before syntax check if" );
+&printdebug( 2, "argv.length=" . (scalar @ARGV) . "" );
+&printdebug( 2, "ARGV[0]='$ARGV[0]'" );
+&printdebug( 2, "ARGV[1]='$ARGV[1]'" );
 
-if ( !defined( $arg1 ) ) {
-    # Get the current date
-    (undef,undef,undef,$mday,$mon,$year,$wday,undef,undef) = localtime(time);
-    # Adjust $mon to be in the 1-12 range
-    $mon++;
-    # Adjust $mday to be Saturday
-    $mday    += (6 - $wday);
-    # Adjust $year for years >= 2000
-    $year -= 100 if ( $year >= 100 );
-    # Adjust $mon, $mday, and $year to be 2-digit numeric strings
-    $mon     =  sprintf( "%2.2d", $mon );
-    $mday    =  sprintf( "%2.2d", $mday );
-    $year    =  sprintf( "%2.2d", $year );
-    $arg1    = "$year$mon$mday";
-    $outfile = $arg1;
-} elsif ( $arg1 =~ /^\d{6}$/ ) {
-    $outfile = $arg1;
-} elsif ( $arg1 eq '-v' ) {
-    $arg2 = shift @ARGV if ( $arg1 =~ /^-/ );
-    $outfile = $arg2;
-} elsif ( $arg1 eq 'clear' ) {
-    &clear_daily_files();
-    exit;
-} else {
-    die "\nERROR: Usage:\nweekly.pl [-v] YYMMDD\n\tYYMMDD is Saturday week ending date\n\t-v for viewing previous weekly report\nweekly.pl clear\n\n";
+# verify syntax before continuing
+if ( scalar @ARGV == 0 ) {
+     die &errmsg_usage( "no arguments specified" );
+} elsif ( $ARGV[0] =~ /^-[cru]$/ && ! defined $ARGV[1] ) {
+     die &errmsg_usage( "no week ending date specified" );
+} elsif ( $ARGV[0] =~ /^-[cru]$/ && $ARGV[1] !~ /^\d{6}$/ ) {
+     die &errmsg_usage( "invalid date specified" );
+} elsif ( $ARGV[0] ne "--delete" && $ARGV[0] !~ /^-[cru]$/ ) {
+     die &errmsg_usage( "unknown argument specified: $ARGV[0]" );
 }
+&printdebug( 1, "after syntax check if" );
 
-print "DEBUG: before if blocks\n" if ( $DEBUG );
-print "DEBUG: outfile='$outfile'\n" if ( $DEBUG );
+my $action = $ARGV[0];
+my $wedate = $ARGV[1]; #week ending date
+&printdebug( 2, "action='$action'" );
+&printdebug( 2, "wedate='$wedate'" );
 
-# TODO: change this to be handled differently
-if ( $arg1 ne '-v' ) {
-    print "DEBUG: in ne -v block\n" if ( $DEBUG );
+if ( defined $wedate ) {
+    $outfile = "$weekdir$wedate.log";
+}
+&printdebug( 2, "outfile='$outfile'" );
 
-    $outfile .= '.log';
+&printdebug( 1, "before if blocks" );
+if ( $action eq '--delete' ) {
+    print "Calling clear_daily_files()\n" if ( $DEBUG );
+    &clear_daily_files() unless ( $DEBUG );
+    print "Call clear_daily_files() here skipped due to debugging\n" if ( $DEBUG );
+    exit;
+}
+elsif ( $action =~ /^-[cu]$/ ) {
+    &printdebug( 1, "in create or update block" );
 
-    print "DEBUG: checking existance of outfile\n" if ( $DEBUG );
-    if ( -e "$weekdir$outfile" ) {
-        die "ERROR: File $weekdir$outfile exists. Aborting.\nDid you forget the '-v' flag?\n\n";
+    &printdebug( 1, "checking existance of outfile" );
+    if ( -e "$outfile" ) {
+        if ( $action eq '-c' ) {
+            die "ERROR: File $outfile exists. Aborting.\nDid you forget the '-r' flag?\n\n";
+        } elsif ( $action eq '-u' ) {
+            &printdebug( 1, "outfile exists, update specified, renaming to backup file" );
+            rename $outfile, "$outfile.bak" or die "$outfile.bak: $!\n";
+        } else {
+            &printdebug( 1, "outfile exists, action not -c or -u, but [$action]" );
+        }
     }
-    print "DEBUG: outfile doesn't exist, we didn't die\n" if ( $DEBUG );
+    &printdebug( 1, "after outfile exists check" );
 
-    print "DEBUG: opening outfile\n" if ( $DEBUG );
-    open( OUTFILE, ">$weekdir$outfile" ) or die "ERROR: Can't open: $weekdir$outfile\n\n";
-    print "DEBUG: outfile now open, if we're here we didn't die\n" if ( $DEBUG );
+    &printdebug( 1, "opening outfile" );
+    open( OUTFILE, ">$outfile" ) or die "ERROR: Can't open: $outfile\n\n";
+    &printdebug( 1, "outfile now open, if we're here we didn't die" );
 
+    &printdebug( 1, "before totalization for loop" );
     # Compute the time for each day
-    foreach $day ( keys %time ) {
-        if ( -e "$taskdir.$day" && open( INPUT, "$taskdir.$day" ) ) {
+    foreach my $day ( sort { $a cmp $b } keys %totals ) {
+        &printdebug( 3, "processing day=$day" );
+        if ( $day ne 'Week' && -e "$taskdir.$day" && open( INPUT, "$taskdir.$day" ) ) {
+            &printdebug( 4, "day file $taskdir.$day now open for input" );
             while ( <INPUT> ) {
-                $time{$day}{file} .= $_;
+                $totals{$day}{file} .= $_;
                 chomp;
-                ( $temp_time, $temp_task ) = split( /\s+/, $_, 2 );
+                my $line = $_;
+                $line =~ s/^\s+//;
+                $line =~ s/\s+$//;
+                ( $temp_time, $temp_task ) = split( /\s+/, $line, 2 );
+                &printdebug( 5, "temp_time=[$temp_time], temp_task=[$temp_task]" );
                 $temp_task =~ s/ /_/g;
                 $temp_task = uc( $temp_task );
                 $tasks{$temp_task} += $temp_time;
-                $time{$day}{total} += $temp_time;
-                $time{Week}{total} += $temp_time;
+                $totals{$day}{total} += $temp_time;
+                $totals{Week}{total} += $temp_time;
                 if ( grep /^$temp_task/i, @break_aliases ) {
-                    $time{$day}{breaks} += $temp_time;
-                    $time{Week}{breaks} += $temp_time;
+                    $totals{$day}{breaks} += $temp_time;
+                    $totals{Week}{breaks} += $temp_time;
                 }
                 else {
-                    $time{$day}{worked} += $temp_time;
-                    $time{Week}{worked} += $temp_time;
+                    $totals{$day}{worked} += $temp_time;
+                    $totals{Week}{worked} += $temp_time;
                 }
             }
             close( INPUT );
+            &printdebug( 4, "$day:  \tworked=[$totals{$day}{worked}], breaks=[$totals{$day}{breaks}]" );
+            &printdebug( 4, "Week:    \tworked=[$totals{Week}{worked}], breaks=[$totals{Week}{breaks}]" );
         }
     }
+    &printdebug( 1, "after totalization for loop" );
 
     # Output the Tasks's Totals to the week's log file.
     print  OUTFILE "========================================\n";
     print  OUTFILE "TOTALS FOR EACH TASK\n";
     print  OUTFILE "========================================\n";
-    foreach $task ( keys %tasks ) {
+    #foreach my $task ( keys %tasks ) {
+    foreach my $task ( sort { $tasks{"$b"} <=> $tasks{"$a"} or lc("$a") cmp lc("$b") } keys %tasks ) {
         printf OUTFILE "%4.1f %-40.40s\n", $tasks{$task}, $task;
     }
     print  OUTFILE "\n";
@@ -143,29 +147,37 @@ if ( $arg1 ne '-v' ) {
     print  OUTFILE "========================================\n";
     print  OUTFILE "TOTALS FOR EACH DAY\n";
     print  OUTFILE "========================================\n";
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Monday}{total},  'MON total time';
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Monday}{breaks}, '  - breaks/lunch';
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Monday}{worked}, '  = TIME WORKED';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Monday}{total},  'MON total time';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Monday}{breaks}, '  - breaks/lunch';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Monday}{worked}, '  = TIME WORKED';
     print  OUTFILE "\n";
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Tuesday}{total},  'TUE total time';
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Tuesday}{breaks}, '  - breaks/lunch';
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Tuesday}{worked}, '  = TIME WORKED';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Tuesday}{total},  'TUE total time';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Tuesday}{breaks}, '  - breaks/lunch';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Tuesday}{worked}, '  = TIME WORKED';
     print  OUTFILE "\n";
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Wednesday}{total},  'WED total time';
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Wednesday}{breaks}, '  - breaks/lunch';
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Wednesday}{worked}, '  = TIME WORKED';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Wednesday}{total},  'WED total time';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Wednesday}{breaks}, '  - breaks/lunch';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Wednesday}{worked}, '  = TIME WORKED';
     print  OUTFILE "\n";
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Thursday}{total},  'THU total time';
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Thursday}{breaks}, '  - breaks/lunch';
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Thursday}{worked}, '  = TIME WORKED';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Thursday}{total},  'THU total time';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Thursday}{breaks}, '  - breaks/lunch';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Thursday}{worked}, '  = TIME WORKED';
     print  OUTFILE "\n";
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Friday}{total},  'FRI total time';
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Friday}{breaks}, '  - breaks/lunch';
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Friday}{worked}, '  = TIME WORKED';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Friday}{total},  'FRI total time';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Friday}{breaks}, '  - breaks/lunch';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Friday}{worked}, '  = TIME WORKED';
+    print  OUTFILE "\n";
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Saturday}{total},  'SAT total time';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Saturday}{breaks}, '  - breaks/lunch';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Saturday}{worked}, '  = TIME WORKED';
+    print  OUTFILE "\n";
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Sunday}{total},  'SUN total time';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Sunday}{breaks}, '  - breaks/lunch';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Sunday}{worked}, '  = TIME WORKED';
     print  OUTFILE "---- -----------------------------------\n";
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Week}{total},  'WEEK total time';
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Week}{breaks}, '   - breaks/lunch';
-    printf OUTFILE "%4.1f %-40.40s\n", $time{Week}{worked}, '   = TIME WORKED';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Week}{total},  'WEEK total time';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Week}{breaks}, '   - breaks/lunch';
+    printf OUTFILE "%4.1f %-40.40s\n", $totals{Week}{worked}, '   = TIME WORKED';
     print  OUTFILE "---- -----------------------------------\n";
     print  OUTFILE "\n";
      
@@ -174,44 +186,45 @@ if ( $arg1 ne '-v' ) {
     print  OUTFILE "BACKUP OF DAILY LOG FILES\n";
     print  OUTFILE "========================================\n";
     print  OUTFILE "-----MON-----\n";
-    print  OUTFILE $time{Monday}{file};
+    print  OUTFILE $totals{Monday}{file};
     print  OUTFILE "-----TUE-----\n";
-    print  OUTFILE $time{Tuesday}{file};
+    print  OUTFILE $totals{Tuesday}{file};
     print  OUTFILE "-----WED-----\n";
-    print  OUTFILE $time{Wednesday}{file};
+    print  OUTFILE $totals{Wednesday}{file};
     print  OUTFILE "-----THU-----\n";
-    print  OUTFILE $time{Thursday}{file};
+    print  OUTFILE $totals{Thursday}{file};
     print  OUTFILE "-----FRI-----\n";
-    print  OUTFILE $time{Friday}{file};
+    print  OUTFILE $totals{Friday}{file};
+    print  OUTFILE "-----SAT-----\n";
+    print  OUTFILE $totals{Saturday}{file};
+    print  OUTFILE "-----SUN-----\n";
+    print  OUTFILE $totals{Sunday}{file};
 
     close( OUTFILE );
-    chmod( 0444, "$weekdir$outfile" );
+    chmod( 0400, "$outfile" );
 }
-print "DEBUG: after ne -v if block\n" if ( $DEBUG );
-print "DEBUG: outfile='$outfile'\n" if ( $DEBUG );
+&printdebug( 1, "after ne -v if block" );
+&printdebug( 2, "outfile='$outfile'" );
 
-if ( $outfile !~ /\.log$/ ) {
-    $outfile .= '.log';
+&printdebug( 1, "checking readability of outfile" );
+if ( ! -r "$outfile" ) {
+    die "ERROR: File not readable: $outfile\n\n";
 }
-print "DEBUG: after adjusting filename\n" if ( $DEBUG );
-print "DEBUG: outfile='$outfile'\n" if ( $DEBUG );
-
-print "DEBUG: checking readability of outfile\n" if ( $DEBUG );
-if ( ! -r "$weekdir$outfile" ) {
-    die "ERROR: File not readable: $weekdir$outfile\n\n";
-}
-print "DEBUG: outfile is readable, we didn't die\n" if ( $DEBUG );
+&printdebug( 1, "outfile is readable, we didn't die" );
 
 # Display the week's report
+&printdebug( 1, "opening outfile: '$outfile'" );
+open( WEEKFILE, "$outfile" ) or die "ERROR: Can't open $outfile\n\n";
+&printdebug( 1, "outfile now open, if we're here we didn't die" );
+my $found_week_total = 0;
 print "\n";
-print "DEBUG: opening outfile: '$weekdir$outfile'\n" if ( $DEBUG );
-open( WEEKFILE, "$weekdir$outfile" ) or die "ERROR: Can't open $weekdir$outfile\n\n";
-print "DEBUG: outfile now open, if we're here we didn't die\n" if ( $DEBUG );
 while ( <WEEKFILE> ) {
+    $found_week_total = 1 if ( $_ =~ /WEEK total time.*/ );
     print $_;
+    last if ( $found_week_total && $_ =~ /^-+/ );
 }
-close( WEEKFILE );
 print "\n";
+close( WEEKFILE );
 
 ######################################################################
 exit; # End of main script ###########################################
@@ -223,9 +236,9 @@ exit; # End of main script ###########################################
 # TODO: pull this out into a tasklogs suite module.
 #
 sub clear_daily_files() {
-    print "DEBUG: in clear function\n" if ( $DEBUG );
+    &printdebug( 1, "in clear function" );
 
-    foreach $day ( keys %time ) {
+    foreach $day ( keys %totals ) {
         my $daily_file = "$taskdir.$day";
         if ( -e "$daily_file" ) {
             print "Removing $daily_file\n";
@@ -259,24 +272,122 @@ sub get_break_aliases($;) {
     return @aliases;
 }
 
+######################################################################
+# Returns the error usage string
+#
+# TODO: pull this out into a tasklogs suite module.
+#
+sub errmsg_usage($) {
+    my $clarification = shift;
+    return <<"eof";
+    Error: $clarification
+    Usage:
+weekly.pl [-c|-r|-u] YYMMDD
+weekly.pl --delete
+    -c YYMMDD   Create new weekly timesheet for week ending YYMMDD
+    -u YYMMDD   Update existing weekly timesheet for week ending YYMMDD
+    -r YYMMDD   Display existing weekly timesheet for week ending YYMMDD
+    --delete    Delete daily log files
+
+eof
+}
+
+######################################################################
+# Prints the debug string to the DEBUG filehandle if:
+# * $DEBUG is true (positive non-zero number)
+# * $lev is at or below $DEBUG
+#
+# TODO: pull this out into a tasklogs suite module.
+#
+sub printdebug($$;) {
+    if ( $DEBUG ) {
+        open( DEBUG, ">&STDERR" ) or die "Problems opening debug filehandle\n";
+        my ($lev, $str) = @_;
+        if ($lev <= $DEBUG) {
+            print DEBUG "DEBUG[$lev]: $str\n";
+        }
+        close( DEBUG );
+    }
+}
+
+######################################################################
+# End of sub-routines ################################################
+######################################################################
 __END__
+
+=pod
 
 =head1 NAME
 
-B<weekly> - weekly report generator
+C<weekly.pl> - weekly timesheet generator
+
+=head1 DESCRIPTION
+
+This program generates a weekly timesheet.
 
 =head1 SYNOPSIS
 
 =over
 
-=item B<weekly>
+=item weekly.pl C<-c YYMMDD>
+    create new weekly timesheet for week ending I<YYMMDD>
 
-=item B<weekly> YYMMDD Where is Saturday week ending date
+=item weekly.pl C<-u YYMMDD>
+    update existing weekly timesheet for week ending I<YYMMDD>
 
-=item B<weekly> -v for viewing previous weekly report
+=item weekly.pl C<-r YYMMDD>
+    display existing weekly timesheet for week ending I<YYMMDD>
 
-=item B<weekly clear>
+=item weekly.pl C<--delete>
+    delete daily log files
+
+=back
+
+=head1 ENVIRONMENT VARIABLES 
+
+Environment variables are used for determining which OS path separator to use.
+
+=over
+
+=item HOME
+    if I<HOME> is found, assume unix-like environment
+
+=item HOMEDRIVE, HOMEPATH
+    if I<HOMEDRIVE> and I<HOMEPATH> are both found, assume Windows
+
+=back
+
+=head1 FILES
+
+=over
+
+=item timesheets/C<YYMMDD.log>
+    timesheet for week ending I<YYMMDD>
+
+=item .C<day-of-week>
+    end of day report for the indicated I<day-of-week> (e.g., C<.Monday>)
+
+=item .break_aliases
+    optional config file, defines I<task names> treated as aliases to I<break>
+
+=back
+
+=head1 AUTHORS
+
+=over
+
+=item Jon Warren C<jon@jonwarren.info>
+
+=back
+
+=head1 GIT REPOSITORY
+
+=over
+
+=item L<https://github.com/jonwarren/tasklogs>
 
 =back
 
 =cut
+
+# vim: ts=4 sw=4 et
