@@ -1,8 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 ######################################################################
 # weekly.pl - time tracking tool
 # See end of file for user documentation.
+# NOTE: # removed "-w" switch to avoid "uninitialized value" warnings
+# from !defined checks or calls to printdebug().
 ######################################################################
+
 # TODO: clean up the debug statements
 
 BEGIN {
@@ -60,7 +63,7 @@ printdebug( 2, "outfile='$outfile'" );
 printdebug( 1, "before if blocks" );
 if ( $action eq '--delete' ) {
     printdebug( 1, "Calling clear_daily_files()" );
-    clear_daily_files( \%totals );
+    clear_daily_files( %totals );
     printdebug( 1, "Call clear_daily_files() here skipped due to debugging" );
     exit;
 }

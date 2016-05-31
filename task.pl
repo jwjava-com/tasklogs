@@ -2,8 +2,9 @@
 ######################################################################
 # task.pl - time tracking tool
 # See end of file for user documentation.
+# NOTE: # removed "-w" switch to avoid "uninitialized value" warnings
+# from !defined checks.
 ######################################################################
-# removed "-w" switch to avoid "uninitialized value" warnings from !defined checks
 
 BEGIN {
     use FindBin;
