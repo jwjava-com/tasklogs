@@ -168,6 +168,8 @@ if ( $task =~ /^quit/i ) {
     my $eod_filename = get_endofday_filename( $task );
     open( EODFH, ">$eod_filename") or die "Error: Could not open $eod_filename for writing";
 
+    &record_task( $logfn, $task, $now, $tc );
+
     my %rounded;
     foreach my $tsk (keys %totals) {
         my $r = nearest( $rounding_precision, $totals{"$tsk"} / $seconds_conversion );
@@ -180,9 +182,9 @@ if ( $task =~ /^quit/i ) {
     print "\n==============================\n";
 
     my $found_zero = 0;
-    foreach my $tsk (sort { $rounded{"$b"} <=> $rounded{"$a"} or lc("$a") cmp lc("$b") } keys %rounded) {
+    foreach my $tsk (sort { $totals{"$b"} <=> $totals{"$a"} or lc("$a") cmp lc("$b") } keys %totals) {
         my $rounded_total = $rounded{"$tsk"};
-        my $raw_total     = $totals{"$tsk"};
+        my $raw_total = $totals{"$tsk"};
         if ( $found_zero == 0 && $rounded_total == 0 ) {
             $found_zero = 1;
             print "------------------------------\n";
@@ -191,8 +193,7 @@ if ( $task =~ /^quit/i ) {
             print "------------------------------\n";
         }
         printf "$printf_fmt  %s\n", $rounded_total, $tsk;
-        printf EODFH "$printf_fmt  %s\n", $rounded_total, $tsk;
-        #printf EODFH "$printf_fmt  %s\n", $raw_total, $tsk;
+        printf EODFH "%-5d  %s\n", $raw_total, $tsk;
     }
 
     backup_logfn( $logfn );
@@ -202,16 +203,21 @@ if ( $task =~ /^quit/i ) {
     exec "perl $daily_script $task";
 }
 else {
+    &record_task( $logfn, $task, $now, $tc );
+
     print "Now doing [$task]\n";
 }
 
-#
+######################################################################
 # Append new task switch record to logfile.
 #
-open OUTFILE, ">>$logfn" or die "Error: $logfn: $!\n";
-$task = $tc->title("$task");
-print OUTFILE "$now $task\n";
-close OUTFILE;
+sub record_task($$$$;) {
+    my ($logfn, $task, $now, $tc) = @_;
+    open OUTFILE, ">>$logfn" or die "Error: $logfn: $!\n";
+    $task = $tc->title("$task");
+    print OUTFILE "$now $task\n";
+    close OUTFILE;
+}
 
 ######################################################################
 exit; # End of main script ###########################################
