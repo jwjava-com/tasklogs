@@ -35,7 +35,7 @@ This program allows tracking start times of various tasks for timesheets.
 
 # REQUIRED MODULES
 
-- `tasklogs`
+- [tasklogs.md](tasklogs.md)
 - [Lingua::EN::Titlecase](https://metacpan.org/pod/Lingua::EN::Titlecase)
 - [Math::Round](https://metacpan.org/pod/Math::Round)
 

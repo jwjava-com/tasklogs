@@ -37,7 +37,7 @@ Environment variables are used for determining which OS path separator to use.
 
 # REQUIRED MODULES
 
-- `tasklogs`
+- [tasklogs.md](tasklogs.md)
 
 # AUTHORS
 
