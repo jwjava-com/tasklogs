@@ -31,9 +31,13 @@ Environment variables are used for determining which OS path separator to use.
 - timesheets/`YYMMDD.log`
     timesheet for week ending _YYMMDD_
 - .`day-of-week`
-    end of day report for the indicated _day-of-week_ (e.g., `.Monday`)
+    end of day report for the indicated _day-of-week_ (e.g., `.Monday`, or `mon`)
 - .break\_aliases
     optional config file, defines _task names_ treated as aliases to _break_
+
+# REQUIRED MODULES
+
+- `tasklogs`
 
 # AUTHORS
 

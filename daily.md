@@ -10,8 +10,8 @@ This program generates a daily report of time worked vs breaks taken.
 
 - daily.pl
     display current daily report snapshot
-- daily.pl `end`
-    create the end-of-day report
+- daily.pl `quit` `day-of-week`
+    do end-of-day processing for _day-of-week_
 
 # ENVIRONMENT VARIABLES 
 
@@ -39,6 +39,7 @@ Environment variables are used for determining which OS path separator to use.
 
 # REQUIRED MODULES
 
+- `tasklogs`
 - [Lingua::EN::Titlecase](https://metacpan.org/pod/Lingua::EN::Titlecase)
 
 # AUTHORS

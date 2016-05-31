@@ -4,44 +4,40 @@
 # See end of file for user documentation.
 ######################################################################
 
+BEGIN {
+    use FindBin;
+    use lib "$FindBin::Bin";
+}
+use tasklogs;
+
 use Lingua::EN::Titlecase;
 
-my $taskdir = "";
-if (defined $ENV{HOME}) {
-    $taskdir = $ENV{HOME} . "/tasklogs/";
-} elsif (defined $ENV{HOMEDRIVE} && defined $ENV{HOMEPATH}) {
-    $taskdir = $ENV{HOMEDRIVE} . $ENV{HOMEPATH} . "tasklogs\\";
-} else {
-    die "HOME or (HOMEDRIVE and HOMEPATH) environment variables not set\n";
+my $logfn = get_logfn();
+my @break_aliases = get_break_aliases();
+
+my $option;
+if ( defined $ARGV[0] ) {
+    $option = join( ' ', @ARGV );
+    $option =~ s/^\s+//;
+    $option =~ s/\s+$//;
 }
-die "$taskdir does not exist" unless ( -d $taskdir );
-die "$taskdir is not accessable" unless ( -x $taskdir );
-die "$taskdir is not readable" unless ( -r $taskdir );
-die "$taskdir is not writable" unless ( -w $taskdir );
 
-my $logfn = $taskdir . '.hours';
-my @break_aliases = &get_break_aliases( $taskdir . '.break_aliases' );
-
-my $option    = shift @ARGV;
-my $temp_task = "";
-my ($temp_time1, $temp_time2) = (0.0, 0.0);
+my ($temp_task, $temp_time1, $temp_time2) = ("", 0.0, 0.0);
 my @tasks;
-my $ctr       = 0;
-my $numtasks  = 0;
-my $day       = 8 * 60 * 60;
+my $ctr      = 0;
+my $numtasks = 0;
+my $day      = 8 * 60 * 60;
 my $currtime = time;
 my ($totaltime, $breaktime, $worktime) = (0.0, 0.0, 0.0);
 my ($total, $breaks, $worked)          = (0.0, 0.0, 0.0);
 my ($mon, $mday, $year, $wday);
-my $startday;
-my $endday;
-my @startofday;
-my @endofday;
+my ($startday, $endday, @startofday, @endofday);
 my $linenumber = 0;  # Current line number of input file
+
 my $tc = Lingua::EN::Titlecase->new("");
 
 # Get the current date
-(undef,undef,undef,$mday,$mon,$year,$wday,undef,undef) = localtime(time);
+(undef,undef,undef,$mday,$mon,$year,$wday,undef,undef) = localtime($currtime);
 # Adjust $mon to be in the 1-12 range
 $mon++;
 # Adjust $mday to be Saturday
@@ -54,45 +50,49 @@ $mday    =  sprintf( "%2.2d", $mday );
 $year    =  sprintf( "%2.2d", $year );
 
 # Check the command-line options and perform the appropriate action:
-# If the option was 'end', perform the end-of-day activities, doing 'weekly'
+# If the option was 'quit', perform the end-of-day activities, doing 'weekly'
 # actions on certain days of the week.
 # Otherwise, just print the 'daily' report to the screen.
-if ( defined( $option ) && $option eq 'end' ) {
-    my $currday = &get_currday();
-    my $filename = "$taskdir.$currday";
 
-    if ( -e $filename ) {
-        # NOTE: This assumes we reached this point from a call to `task.pl quit`
-        #       which outputs the end-of-day log for us.
-        # Prompt the user for whether the log file looks good, if not
-        # open the logfile into a text editor (e.g., vim).
-        print "\n\nEdit [y|n]? ";
-        my $doEdit;
-        chomp( $doEdit = <STDIN> );
-        if ( $doEdit eq 'Y' || $doEdit eq 'y' ) {
-            system "vim $filename";
-        }
-    }
+if ( defined( $option ) ) {
+    if ( $option =~ /^quit/i ) {
+        my $eod_filename = get_endofday_filename( $option );
 
-    # If it's the end of the week, run the weekly report then clear out the
-    # end-of-day logs for the week.
-    # TODO: fix this if you've worked past midnight on Friday
-    if ( $wday == 5 || $wday == 6 || $wday == 0 ) {
-        # Prompt the user for whether the weekly report should be ran.
-        print "\n\nProcess Weekly Report [y|n]? ";
-        my $doWeek;
-        chomp( $doWeek = <STDIN> );
-        if ( $doWeek eq 'Y' || $doWeek eq 'y' ) {
-            my $weekly = $taskdir . 'weekly.pl';
-            print `perl $weekly $year$mon$mday`;
-            # Prompt the user for whether the daily logs should be cleared.
-            print "\n\nClear Daily Logs [y|n]? ";
-            my $doClear;
-            chomp( $doClear = <STDIN> );
-            if ( $doClear eq 'Y' || $doClear eq 'y' ) {
-                print `perl $weekly clear`;
+        if ( -e $eod_filename ) {
+            # NOTE: This assumes we reached this point from a call to `task.pl quit`
+            #       which outputs the end-of-day log for us.
+            # Prompt the user for whether the log file looks good, if not
+            # open the logfile into a text editor (e.g., vim).
+            print "\n\nEdit [y|n]? ";
+            my $doEdit;
+            chomp( $doEdit = <STDIN> );
+            if ( $doEdit eq 'Y' || $doEdit eq 'y' ) {
+                system "vim $eod_filename";
             }
         }
+
+        # If it's the end of the week, run the weekly report then clear out the
+        # end-of-day logs for the week.
+        # TODO: fix this if you've worked past midnight on Friday
+        if ( $wday == 5 || $wday == 6 || $wday == 0 ) {
+            # Prompt the user for whether the weekly report should be ran.
+            print "\n\nProcess Weekly Report [y|n]? ";
+            my $doWeek;
+            chomp( $doWeek = <STDIN> );
+            if ( $doWeek eq 'Y' || $doWeek eq 'y' ) {
+                my $weekly = get_weekly_script();
+                print `perl $weekly $year$mon$mday`;
+                # Prompt the user for whether the daily logs should be cleared.
+                print "\n\nClear Daily Logs [y|n]? ";
+                my $doClear;
+                chomp( $doClear = <STDIN> );
+                if ( $doClear eq 'Y' || $doClear eq 'y' ) {
+                    print `perl $weekly clear`;
+                }
+            }
+        }
+    } else {
+        die "Error: Invalid option: $option\n";
     }
 }
 else {
@@ -107,7 +107,7 @@ else {
         close( INPUT );
         $endday        = $startday;    # Store $startday in $endday for later use
         @startofday    = localtime( $startday );
-        $startday      = &fmttimearr( \@startofday );
+        $startday      = fmttimearr( @startofday );
         $ctr           = 0;
         $numtasks      = scalar( @tasks );
         if ( $numtasks > 1 ) {
@@ -141,7 +141,7 @@ else {
         }
 
         @endofday  = localtime( $endday + $day + $breaktime );
-        $endday    = &fmttimearr( \@endofday );
+        $endday    = fmttimearr( @endofday );
         $totaltime = $worktime + $breaktime;
         &printreport( $worktime, $breaktime, $totaltime, $startday, $endday );
     } else {
@@ -152,112 +152,6 @@ else {
 ######################################################################
 exit; # End of main script ###########################################
 ######################################################################
-
-######################################################################
-# Get the name of the current day
-#
-# TODO: pull this out into a tasklogs suite module.
-#
-sub get_currday() {
-    my $wday;
-    my @days = qw(Sunday Monday Tuesday Wednesday Thursday Friday Saturday);
-    (undef,undef,undef,undef,undef,undef,$wday,undef,undef) = localtime(time);
-    return $days[$wday];
-}
-
-######################################################################
-# Returns an array of 'break' aliases.
-# Attempts to read a config file, if file exists uses contents,
-# otherwise uses a set of standard aliases.
-#
-# TODO: pull this out into a tasklogs suite module.
-#
-sub get_break_aliases($;) {
-    my $fn = shift;
-    my @aliases;
-    if ( -f "$fn" ) {
-        if ( open( INPUT, $fn ) ) {
-            while ( <INPUT> ) {
-                chomp;
-                push( @aliases, $_ );
-            }
-            close( INPUT );
-        }
-    } else {
-        # No break_aliases file defined, using standard values
-        push( @aliases, 'Break', 'Lunch', 'Sick', 'Vacation', 'Holiday' );
-    }
-    return @aliases;
-}
-
-######################################################################
-# Format Time Array Values as 2-digit values
-#
-# TODO: pull this out into a tasklogs suite module.
-#
-sub fmttimearr( \@ ) {
-    my $timearr = shift;
-    my $timestr;
-    my $ampm    = 'AM';
-
-    # Adjust second and minute to be 2-digit numeric strings
-    $$timearr[0]  = sprintf( "%2.2d", $$timearr[0] );
-    $$timearr[1]  = sprintf( "%2.2d", $$timearr[1] );
-
-    # Determine AM or PM and adjust hour to be w-digit numeric string
-    if ( $$timearr[2] > 12 ) {
-        $$timearr[2]  = sprintf( "%2.2d", $$timearr[2] - 12 );
-        $ampm         = 'PM';
-    }
-    elsif ( $$timearr[2] == 0 ) {
-        $$timearr[2]  = sprintf( "%2.2d", $$timearr[2] + 12 );
-        $ampm         = 'AM';
-    }
-    else {
-        $$timearr[2]  = sprintf( "%2.2d", $$timearr[2] );
-        $ampm         = 'AM';
-    }
-
-    # Adjust month to be in the 1-12 range
-    $$timearr[4]++;
-
-    # Adjust year for years >= 2000
-    $$timearr[5] -= 100 if ( $$timearr[5] >= 100 );
-
-    # Adjust month, monthday, and year to be 2-digit numeric strings
-    $$timearr[3] = sprintf( "%2.2d", $$timearr[3] );
-    $$timearr[4] = sprintf( "%2.2d", $$timearr[4] );
-    $$timearr[5] = sprintf( "%2.2d", $$timearr[5] );
-
-    # Construct the formated time string
-    $timestr      = join( '/', $$timearr[4], $$timearr[3], $$timearr[5] );
-    $timestr     .= ' ';
-    $timestr     .= join( ':', $$timearr[2], $$timearr[1], $$timearr[0] );
-    $timestr     .= " $ampm";
-
-    return $timestr;
-}
-
-######################################################################
-# Redo $time as either hours, minutes, or seconds
-#
-sub redotime( $ ) {
-    my $time = shift;
-    my $desc = "";
-
-    if ( $time > 60 * 60 ) {
-        $time = $time / 60 / 60;
-        $desc = 'hours';
-    }
-    elsif ( $time > 60 ) {
-        $time = $time / 60;
-        $desc = 'minutes';
-    }
-    else {
-        $desc = 'seconds';
-    }
-    return ($time, $desc);
-}
 
 ######################################################################
 # Print the time report
@@ -272,21 +166,21 @@ sub printreport( $$$$$ ) {
 
     printf( "\n%s\n", "---------------------------------------" );
     printf( "  Current Task:  %s\n", $temp_task );
-    printf( "           for:  %4.1f %s\n", &redotime( $currtime - $temp_time ) );
+    printf( "           for:  %4.1f %s\n", redotime( $currtime - $temp_time ) );
     printf( "  Arrive Work:   %s\n", $startday );
     printf( "  Leave Work:    %s\n", $endday );
     printf( "  %s\n", "-----------------------------------" );
-    printf( "  Worked:        %4.1f %s\n", &redotime( $worktime ) );
-    printf( "  Breaks:      + %4.1f %s\n", &redotime( $breaktime ) );
-    printf( "  Total:       = %4.1f %s\n", &redotime( $totaltime ) );
+    printf( "  Worked:        %4.1f %s\n", redotime( $worktime ) );
+    printf( "  Breaks:      + %4.1f %s\n", redotime( $breaktime ) );
+    printf( "  Total:       = %4.1f %s\n", redotime( $totaltime ) );
     printf( "  %s\n", "-----------------------------------" );
     if ( $worktime < $day ) {
         $timediff = $day - $worktime;
-        printf( "  Need to work:  %4.1f %s\n", &redotime( $timediff ) );
+        printf( "  Need to work:  %4.1f %s\n", redotime( $timediff ) );
     }
     else {
         $timediff = $worktime - $day;
-        printf( "  Worked over:   %4.1f %s\n", &redotime( $timediff ) );
+        printf( "  Worked over:   %4.1f %s\n", redotime( $timediff ) );
     }
     printf( "%s\n\n", "---------------------------------------" );
 }
@@ -313,8 +207,8 @@ This program generates a daily report of time worked vs breaks taken.
 =item daily.pl
     display current daily report snapshot
 
-=item daily.pl C<end>
-    create the end-of-day report
+=item daily.pl C<quit> C<day-of-week>
+    do end-of-day processing for I<day-of-week>
 
 =back
 
@@ -360,6 +254,8 @@ Environment variables are used for determining which OS path separator to use.
 =head1 REQUIRED MODULES
 
 =over
+
+=item C<tasklogs>
 
 =item L<Lingua::EN::Titlecase>
 

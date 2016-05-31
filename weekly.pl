@@ -3,32 +3,18 @@
 # weekly.pl - time tracking tool
 # See end of file for user documentation.
 ######################################################################
-
 # TODO: clean up the debug statements
-my $DEBUG = 0;
 
-my $taskdir = "";
-my $weekdir = "";
-if (defined $ENV{HOME}) {
-    $taskdir = $ENV{HOME} . "/tasklogs/";
-    $weekdir = $taskdir . "timesheets/";
-} elsif (defined $ENV{HOMEDRIVE} && defined $ENV{HOMEPATH}) {
-    $taskdir = $ENV{HOMEDRIVE} . $ENV{HOMEPATH} . "tasklogs\\";
-    $weekdir = $taskdir . "timesheets\\";
-} else {
-    die "HOME or (HOMEDRIVE and HOMEPATH) environment variables not set\n";
+BEGIN {
+    use FindBin;
+    use lib "$FindBin::Bin";
 }
-die "$taskdir does not exist" unless ( -d $taskdir );
-die "$taskdir is not accessable" unless ( -x $taskdir );
-die "$taskdir is not readable" unless ( -r $taskdir );
-die "$taskdir is not writable" unless ( -w $taskdir );
-die "$weekdir does not exist" unless ( -d $weekdir );
-die "$weekdir is not accessable" unless ( -x $weekdir );
-die "$weekdir is not readable" unless ( -r $weekdir );
-die "$weekdir is not writable" unless ( -w $weekdir );
+use tasklogs;
 
-my $logfn = $taskdir . '.hours';
-my @break_aliases = &get_break_aliases( $taskdir . '.break_aliases' );
+my $taskdir       = get_taskdir();
+my $timesheetdir  = get_timesheetsdir();
+my $logfn         = get_logfn();
+my @break_aliases = get_break_aliases();
 
 my %totals = (
     Monday    => { total => 0.0, breaks => 0.0, worked => 0.0, file => "" },
@@ -44,10 +30,10 @@ my %tasks;
 my $temp_time = 0.0;
 my $temp_task = '';
 
-&printdebug( 1, "before syntax check if" );
-&printdebug( 2, "argv.length=" . (scalar @ARGV) . "" );
-&printdebug( 2, "ARGV[0]='$ARGV[0]'" );
-&printdebug( 2, "ARGV[1]='$ARGV[1]'" );
+printdebug( 1, "before syntax check if" );
+printdebug( 2, "argv.length=" . (scalar @ARGV) . "" );
+printdebug( 2, "ARGV[0]='$ARGV[0]'" );
+printdebug( 2, "ARGV[1]='$ARGV[1]'" );
 
 # verify syntax before continuing
 if ( scalar @ARGV == 0 ) {
@@ -59,51 +45,51 @@ if ( scalar @ARGV == 0 ) {
 } elsif ( $ARGV[0] ne "--delete" && $ARGV[0] !~ /^-[cru]$/ ) {
      die &errmsg_usage( "unknown argument specified: $ARGV[0]" );
 }
-&printdebug( 1, "after syntax check if" );
+printdebug( 1, "after syntax check if" );
 
 my $action = $ARGV[0];
 my $wedate = $ARGV[1]; #week ending date
-&printdebug( 2, "action='$action'" );
-&printdebug( 2, "wedate='$wedate'" );
+printdebug( 2, "action='$action'" );
+printdebug( 2, "wedate='$wedate'" );
 
 if ( defined $wedate ) {
-    $outfile = "$weekdir$wedate.log";
+    $outfile = "$timesheetdir$wedate.log";
 }
-&printdebug( 2, "outfile='$outfile'" );
+printdebug( 2, "outfile='$outfile'" );
 
-&printdebug( 1, "before if blocks" );
+printdebug( 1, "before if blocks" );
 if ( $action eq '--delete' ) {
-    print "Calling clear_daily_files()\n" if ( $DEBUG );
-    &clear_daily_files() unless ( $DEBUG );
-    print "Call clear_daily_files() here skipped due to debugging\n" if ( $DEBUG );
+    printdebug( 1, "Calling clear_daily_files()" );
+    clear_daily_files( \%totals );
+    printdebug( 1, "Call clear_daily_files() here skipped due to debugging" );
     exit;
 }
 elsif ( $action =~ /^-[cu]$/ ) {
-    &printdebug( 1, "in create or update block" );
+    printdebug( 1, "in create or update block" );
 
-    &printdebug( 1, "checking existance of outfile" );
+    printdebug( 1, "checking existance of outfile" );
     if ( -e "$outfile" ) {
         if ( $action eq '-c' ) {
             die "ERROR: File $outfile exists. Aborting.\nDid you forget the '-r' flag?\n\n";
         } elsif ( $action eq '-u' ) {
-            &printdebug( 1, "outfile exists, update specified, renaming to backup file" );
-            rename $outfile, "$outfile.bak" or die "$outfile.bak: $!\n";
+            printdebug( 1, "outfile exists, update specified, renaming to backup file" );
+            rename $outfile, "$outfile.bak" or die "Error: $outfile.bak: $!\n";
         } else {
-            &printdebug( 1, "outfile exists, action not -c or -u, but [$action]" );
+            printdebug( 1, "outfile exists, action not -c or -u, but [$action]" );
         }
     }
-    &printdebug( 1, "after outfile exists check" );
+    printdebug( 1, "after outfile exists check" );
 
-    &printdebug( 1, "opening outfile" );
+    printdebug( 1, "opening outfile" );
     open( OUTFILE, ">$outfile" ) or die "ERROR: Can't open: $outfile\n\n";
-    &printdebug( 1, "outfile now open, if we're here we didn't die" );
+    printdebug( 1, "outfile now open, if we're here we didn't die" );
 
-    &printdebug( 1, "before totalization for loop" );
+    printdebug( 1, "before totalization for loop" );
     # Compute the time for each day
     foreach my $day ( sort { $a cmp $b } keys %totals ) {
-        &printdebug( 3, "processing day=$day" );
+        printdebug( 3, "processing day=$day" );
         if ( $day ne 'Week' && -e "$taskdir.$day" && open( INPUT, "$taskdir.$day" ) ) {
-            &printdebug( 4, "day file $taskdir.$day now open for input" );
+            printdebug( 4, "day file $taskdir.$day now open for input" );
             while ( <INPUT> ) {
                 $totals{$day}{file} .= $_;
                 chomp;
@@ -111,7 +97,7 @@ elsif ( $action =~ /^-[cu]$/ ) {
                 $line =~ s/^\s+//;
                 $line =~ s/\s+$//;
                 ( $temp_time, $temp_task ) = split( /\s+/, $line, 2 );
-                &printdebug( 5, "temp_time=[$temp_time], temp_task=[$temp_task]" );
+                printdebug( 5, "temp_time=[$temp_time], temp_task=[$temp_task]" );
                 $temp_task =~ s/ /_/g;
                 $temp_task = uc( $temp_task );
                 $tasks{$temp_task} += $temp_time;
@@ -127,11 +113,11 @@ elsif ( $action =~ /^-[cu]$/ ) {
                 }
             }
             close( INPUT );
-            &printdebug( 4, "$day:  \tworked=[$totals{$day}{worked}], breaks=[$totals{$day}{breaks}]" );
-            &printdebug( 4, "Week:    \tworked=[$totals{Week}{worked}], breaks=[$totals{Week}{breaks}]" );
+            printdebug( 4, "$day:  \tworked=[$totals{$day}{worked}], breaks=[$totals{$day}{breaks}]" );
+            printdebug( 4, "Week:    \tworked=[$totals{Week}{worked}], breaks=[$totals{Week}{breaks}]" );
         }
     }
-    &printdebug( 1, "after totalization for loop" );
+    printdebug( 1, "after totalization for loop" );
 
     # Output the Tasks's Totals to the week's log file.
     print  OUTFILE "========================================\n";
@@ -203,19 +189,19 @@ elsif ( $action =~ /^-[cu]$/ ) {
     close( OUTFILE );
     chmod( 0400, "$outfile" );
 }
-&printdebug( 1, "after ne -v if block" );
-&printdebug( 2, "outfile='$outfile'" );
+printdebug( 1, "after ne -v if block" );
+printdebug( 2, "outfile='$outfile'" );
 
-&printdebug( 1, "checking readability of outfile" );
+printdebug( 1, "checking readability of outfile" );
 if ( ! -r "$outfile" ) {
     die "ERROR: File not readable: $outfile\n\n";
 }
-&printdebug( 1, "outfile is readable, we didn't die" );
+printdebug( 1, "outfile is readable, we didn't die" );
 
 # Display the week's report
-&printdebug( 1, "opening outfile: '$outfile'" );
+printdebug( 1, "opening outfile: '$outfile'" );
 open( WEEKFILE, "$outfile" ) or die "ERROR: Can't open $outfile\n\n";
-&printdebug( 1, "outfile now open, if we're here we didn't die" );
+printdebug( 1, "outfile now open, if we're here we didn't die" );
 my $found_week_total = 0;
 print "\n";
 while ( <WEEKFILE> ) {
@@ -231,51 +217,7 @@ exit; # End of main script ###########################################
 ######################################################################
 
 ######################################################################
-# Clear the daily log files (by deletion)
-#
-# TODO: pull this out into a tasklogs suite module.
-#
-sub clear_daily_files() {
-    &printdebug( 1, "in clear function" );
-
-    foreach $day ( keys %totals ) {
-        my $daily_file = "$taskdir.$day";
-        if ( -e "$daily_file" ) {
-            print "Removing $daily_file\n";
-            unlink "$daily_file" or die "Could not remove $daily_file: $!\n";
-        }
-    }
-}
-
-######################################################################
-# Returns an array of 'break' aliases.
-# Attempts to read a config file, if file exists uses contents,
-# otherwise uses a set of standard aliases.
-#
-# TODO: pull this out into a tasklogs suite module.
-#
-sub get_break_aliases($;) {
-    my $fn = shift;
-    my @aliases;
-    if ( -f "$fn" ) {
-        if ( open( INPUT, $fn ) ) {
-            while ( <INPUT> ) {
-                chomp;
-                push( @aliases, $_ );
-            }
-            close( INPUT );
-        }
-    } else {
-        # No break_aliases file defined, using standard values
-        push( @aliases, 'Break', 'Lunch', 'Sick', 'Vacation', 'Holiday' );
-    }
-    return @aliases;
-}
-
-######################################################################
 # Returns the error usage string
-#
-# TODO: pull this out into a tasklogs suite module.
 #
 sub errmsg_usage($) {
     my $clarification = shift;
@@ -290,24 +232,6 @@ weekly.pl --delete
     --delete    Delete daily log files
 
 eof
-}
-
-######################################################################
-# Prints the debug string to the DEBUG filehandle if:
-# * $DEBUG is true (positive non-zero number)
-# * $lev is at or below $DEBUG
-#
-# TODO: pull this out into a tasklogs suite module.
-#
-sub printdebug($$;) {
-    if ( $DEBUG ) {
-        open( DEBUG, ">&STDERR" ) or die "Problems opening debug filehandle\n";
-        my ($lev, $str) = @_;
-        if ($lev <= $DEBUG) {
-            print DEBUG "DEBUG[$lev]: $str\n";
-        }
-        close( DEBUG );
-    }
 }
 
 ######################################################################
@@ -365,10 +289,18 @@ Environment variables are used for determining which OS path separator to use.
     timesheet for week ending I<YYMMDD>
 
 =item .C<day-of-week>
-    end of day report for the indicated I<day-of-week> (e.g., C<.Monday>)
+    end of day report for the indicated I<day-of-week> (e.g., C<.Monday>, or C<mon>)
 
 =item .break_aliases
     optional config file, defines I<task names> treated as aliases to I<break>
+
+=back
+
+=head1 REQUIRED MODULES
+
+=over
+
+=item C<tasklogs>
 
 =back
 
