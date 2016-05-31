@@ -126,25 +126,28 @@ else {
     $now = time;
 }
 
-$task =~ s/^\s+//;
-$task =~ s/\s+$//;
-$task = $tc->title("$task");
+if ( defined $task ) {
+    $task =~ s/^\s+//;
+    $task =~ s/\s+$//;
+    $task = $tc->title("$task");
+}
 
 #
 # Show most recent task from log file.
 #
-if (defined $prev) {
+if ( defined $prev ) {
     my @startofprev = localtime( $then );
     $startprev      = fmttimearr( @startofprev );
 
     $diff = $now - $then;
     $totals{"$prev"} += $diff;
     my $min = nearest( $QUARTERS, $diff / $TO_MINS );
-    if (!defined $task) {
+
+    if ( ! defined $task ) {
         printf "Doing [%s], %.2f minutes, started at %s\n", $prev, $min, $startprev;
         exit;
     }
-    elsif (lc($task) eq lc($prev)) {
+    elsif ( lc($task) eq lc($prev) ) {
         printf "Already doing [%s], %.2f minutes, started at %s\n", $prev, $min, $startprev;
         exit;
     }
