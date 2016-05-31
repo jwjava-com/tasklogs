@@ -130,10 +130,11 @@ sub rename_task($$$;) {
         open( INFILE, "<$logfn" ) or die "Error: Could not open $logfn for input: $!\n";
         open( OUTFILE, ">$logfn.tmp" ) or die "Error: Could not open $logfn.tmp for output: $!\n";
         while (<INFILE>) {
-            if ( $_ =~ s/$oldtask/$newtask/i ) {
+            $_ =~ s/\s+$//;
+            if ( $_ =~ s/(\s+)$oldtask$/$1$newtask/i ) {
                 $count++;
             }
-            print OUTFILE $_;
+            print OUTFILE "$_$/";
         }
         close INFILE;
         close OUTFILE;
