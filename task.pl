@@ -119,13 +119,15 @@ else {
             exit;
         }
         $task = join( ' ', @ARGV );
-        $task =~ s/^\s+//;
-        $task =~ s/\s+$//;
     } else {
         $task = undef;
     }
     $now = time;
 }
+
+$task =~ s/^\s+//;
+$task =~ s/\s+$//;
+$task = $tc->title("$task");
 
 #
 # Show most recent task from log file.
