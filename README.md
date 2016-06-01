@@ -12,19 +12,19 @@ either Cygwin or Linux.
 
 ## TODOS
 
-- ~~(done) `weekly.pl`: Auto-calculate Saturday date if none specified~~
-- ~~(done) Extract common code to a module~~
-- Add better handling of incorrect command-line parameters
-- ~~(done) Expand documentation~~
-- Port to other languages (spoken & programming)
-- ~~(done) Auto-create necessary paths & allow specifying different paths~~
-- ~~(done) Handle spaces inside quoted task names~~
 - Allow changing back to the previous (or previous X) task (ala bash !! or !-n)
 - Allow resuming a day after a previous 'quit'
+- Add better handling of incorrect command-line parameters
+- Port to other languages (spoken & programming)
+- ~~(done) `weekly.pl`: Auto-calculate Saturday date if none specified~~
+- ~~(done) Extract common code to a module~~
+- ~~(done) Expand documentation~~
+- ~~(done) Auto-create necessary paths & allow specifying different paths~~
+- ~~(done) Handle spaces inside quoted task names~~
 - ~~(done) Add configurable list (or file) of tasks to be treated same as 'break'~~
 - ~~(done) Handle ending a day after midnight~~
-- (started, done in `task.pl`) Update to allow changing rounding/output
-- Change end-of-day files to always store raw seconds totals, to improve week-end numbers
+- ~~(done) Update to allow changing rounding/output~~
+- ~~(done) Change end-of-day files to always store raw seconds totals, to improve week-end numbers~~
 - ~~(done) Rename end-of-week files from MMDDYY to YYMMDD~~
 - ~~(done) Fix prompting to edit end-of-day log file~~
 - ~~(done) Add option for renaming the current task: `task.pl -r "new task"` or `task.pl --rename "new task"`~~
