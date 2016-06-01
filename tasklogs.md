@@ -8,6 +8,14 @@ This module contains supporting methods for the tasklogs scripts.
 
 # METHODS
 
+- get\_rounding\_precision
+    Get the specified rounding precision
+- get\_seconds\_conversion
+    Get the specified seconds conversion
+- get\_minutes\_conversion
+    Get the specified minutes conversion
+- get\_printf\_fmt
+    Get the specified output printf format
 - get\_taskdir
     Get the name of the tasklogs directory
 - get\_timesheetsdir
@@ -16,8 +24,17 @@ This module contains supporting methods for the tasklogs scripts.
     Get the `daily.pl` script location
 - get\_weekly\_script
     Get the `weekly.pl` script location
-- get\_endofday\_filename
-    Get the name of the end-of-day log file
+- get\_endofday
+    Get a hashref to a hash containing 'fn' (end-of-day log filename)
+    and 'dt' (DateTime object for day we're ending).
+- get\_endofday\_object
+    Get a DateTime object for the day we're ending
+- get\_endofweek\_ymd
+    Get a YYYYMMDD formated string for the week we're ending given
+    an end-of-day DateTime object.
+- get\_endofweek\_object
+    Get a DateTime object for the week we're ending given an end-of-day
+    DateTime object.
 - backup\_logfn
     Backup the hours log file
 - rename\_task

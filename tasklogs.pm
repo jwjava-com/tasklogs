@@ -10,7 +10,18 @@ use vars qw(@ISA @EXPORT $VERSION);
 use Exporter;
 $VERSION = 0.1;
 @ISA = qw(Exporter);
-@EXPORT = qw(get_taskdir get_timesheetsdir get_daily_script get_weekly_script get_endofday_filename backup_logfn rename_task get_logfn fmttimearr get_break_aliases redotime clear_daily_files printdebug);
+@EXPORT = qw(
+    get_rounding_precision     get_seconds_conversion
+    get_minutes_conversion     get_printf_fmt
+    get_taskdir                get_timesheetsdir
+    get_daily_script           get_weekly_script
+    get_endofday               get_endofday_object
+    get_endofweek_ymd          get_endofweek_object
+    backup_logfn               rename_task
+    get_logfn                  fmttimearr
+    get_break_aliases          redotime
+    clear_daily_files          printdebug
+);
 
 use Math::Round qw(nearest);
 use DateTime;
@@ -18,11 +29,62 @@ use DateTime::TimeZone;
 use DateTime::Format::Natural;
 
 my $DEBUG = 0;
+my ($TENTHS, $QUARTERS, $HALVES, $WHOLE) = (0.1, 0.25, 0.5, 1);
+my ($TO_MINS, $TO_HRS) = (60, 3600);
+# ====================================================================
+# TODO: Set these to control output.
+# #====================================================================
+# By default this will output values rounded to nearest quarter hour:
+my $rounding_precision = $QUARTERS;
+my $seconds_conversion = $TO_HRS;
+my $printf_fmt         = "%5.2f";
+#
+# If you need output by tenth of an hour, use these values:
+# my $rounding_precision = $TENTHS;
+# my $seconds_conversion = $TO_HRS;
+# my $printf_fmt         = "%5.1f";
+#
+# If you need output in minutes, rounded to nearest minute:
+# my $rounding_precision = $WHOLE;
+# my $seconds_conversion = $TO_MINS;
+# my $printf_fmt         = "%5.0f";
+# #====================================================================
 
-# change at your own risk -- some of the other scripts might not be forgiving
+# #====================================================================
+# change at your own risk -- some of the code might not be forgiving
+# #====================================================================
 my $tasklogs_dirname   = 'tasklogs';  # main directory for all tasklogs
 my $tasklog_filename   = '.hours';    # task log file, stored in $tasklogs_dirname
 my $tasklogs_backupdir = 'backups';   # subdirectory of $tasklogs_dirname
+# #====================================================================
+
+######################################################################
+# Get the specified rounding precision
+#
+sub get_rounding_precision() {
+    return $rounding_precision;
+}
+
+######################################################################
+# Get the specified seconds conversion
+#
+sub get_seconds_conversion() {
+    return $seconds_conversion;
+}
+
+######################################################################
+# Get the specified minutes conversion
+#
+sub get_minutes_conversion() {
+    return $TO_MINS;
+}
+
+######################################################################
+# Get the specified output printf format
+#
+sub get_printf_fmt() {
+    return $printf_fmt;
+}
 
 ######################################################################
 # Get the name of the tasklogs directory
@@ -86,27 +148,79 @@ sub get_weekly_script() {
 }
 
 ######################################################################
-# Get the name of the end-of-day log file
+# Get a hashref to a hash containing 'fn' (end-of-day log filename)
+# and 'dt' (DateTime object for day we're ending).
 #
-sub get_endofday_filename($) {
-    my $task = shift;
-    my $day = undef;
-    ($task, $day) = split( /\s+/, $task, 2 );
+sub get_endofday($) {
+    my ($task, $day) = split( /\s+/, shift, 2 );
+
+    my %endofday = (
+        fn => "",
+        dt => undef,
+    );
+
+    my $dt = undef;
     if ( defined $day ) {
-        my $tz = DateTime::TimeZone->new( name => "local" );
-        my $parser = DateTime::Format::Natural->new( time_zone => $tz->name() );
-        my $dt = $parser->parse_datetime($day);
-        if ( $parser->success() ) {
-            $day = $dt->day_name();
-        } else {
-            die "Error: Could not parse provided day [$day]: " . $parser->error() . "\n";
-        }
+        $dt = &get_endofday_object( $day );
+        $day = $dt->day_name();
     } else {
         die "Error: No day provided\n";
     }
 
-    my $taskdir = &get_taskdir();
-    return "$taskdir.$day";
+    $endofday{fn} = &get_taskdir() . ".$day";
+    $endofday{dt} = $dt;
+
+    return \%endofday;
+}
+
+######################################################################
+# Get a DateTime object for the day we're ending
+#
+sub get_endofday_object($) {
+    my $day = shift;
+
+    my $tz     = DateTime::TimeZone->new( name => "local" );
+    my $parser = DateTime::Format::Natural->new( time_zone => $tz->name() );
+
+    my $eod_dt   = $parser->parse_datetime($day);
+    if ( ! $parser->success() ) {
+        die "Error: Could not parse provided day [$day]: " . $parser->error() . "\n";
+    }
+
+    my $today_dt = DateTime->today( time_zone => $tz->name() );
+    die "Error: Cannot end a future date\n" if ( DateTime->compare( $eod_dt, $today_dt ) > 0 );
+
+    return $eod_dt;
+}
+
+######################################################################
+# Get a YYYYMMDD formated string for the week we're ending given
+# an end-of-day DateTime object.
+#
+sub get_endofweek_ymd($) {
+    my $dt = &get_endofweek_object( shift );
+    return $dt->ymd('');
+}
+
+######################################################################
+# Get a DateTime object for the week we're ending given an end-of-day
+# DateTime object.
+#
+sub get_endofweek_object($) {
+    my $dt = shift;
+
+    my $sat_offset = 6 - $dt->day_of_week();  # 6 is 'Saturday'
+    $dt->add( days => $sat_offset );
+
+#    my $tz     = DateTime::TimeZone->new( name => "local" );
+#    my $parser = DateTime::Format::Natural->new( time_zone => $tz->name() );
+#
+#    my $sat_dt   = $parser->parse_datetime('Saturday');
+#    if ( ! $parser->success() ) {
+#        die "Error: Could not parse 'Saturday': " . $parser->error() . "\n";
+#    }
+
+    return $dt;
 }
 
 ######################################################################
@@ -307,6 +421,18 @@ This module contains supporting methods for the tasklogs scripts.
 
 =over
 
+=item get_rounding_precision
+    Get the specified rounding precision
+
+=item get_seconds_conversion
+    Get the specified seconds conversion
+
+=item get_minutes_conversion
+    Get the specified minutes conversion
+
+=item get_printf_fmt
+    Get the specified output printf format
+
 =item get_taskdir
     Get the name of the tasklogs directory
 
@@ -319,8 +445,20 @@ This module contains supporting methods for the tasklogs scripts.
 =item get_weekly_script
     Get the C<weekly.pl> script location
 
-=item get_endofday_filename
-    Get the name of the end-of-day log file
+=item get_endofday
+    Get a hashref to a hash containing 'fn' (end-of-day log filename)
+    and 'dt' (DateTime object for day we're ending).
+
+=item get_endofday_object
+    Get a DateTime object for the day we're ending
+
+=item get_endofweek_ymd
+    Get a YYYYMMDD formated string for the week we're ending given
+    an end-of-day DateTime object.
+
+=item get_endofweek_object
+    Get a DateTime object for the week we're ending given an end-of-day
+    DateTime object.
 
 =item backup_logfn
     Backup the hours log file
