@@ -38,6 +38,7 @@ Environment variables are used for determining which OS path separator to use.
 # REQUIRED MODULES
 
 - [tasklogs.md](tasklogs.md)
+- [Math::Round](https://metacpan.org/pod/Math::Round)
 
 # AUTHORS
 
