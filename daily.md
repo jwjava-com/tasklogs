@@ -40,6 +40,7 @@ Environment variables are used for determining which OS path separator to use.
 # REQUIRED MODULES
 
 - [tasklogs.md](tasklogs.md)
+- [DateTime](https://metacpan.org/pod/DateTime)
 - [Lingua::EN::Titlecase](https://metacpan.org/pod/Lingua::EN::Titlecase)
 
 # AUTHORS
