@@ -12,29 +12,9 @@ BEGIN {
 }
 use tasklogs;
 
+use DateTime;
 use Lingua::EN::Titlecase;
 use Math::Round qw(nearest);
-
-my ($TENTHS, $QUARTERS, $HALVES, $WHOLE) = (0.1, 0.25, 0.5, 1);
-my ($TO_MINS, $TO_HRS) = (60, 3600);
-# ====================================================================
-# TODO: Set these to control output.
-# #====================================================================
-# By default this will output values rounded to nearest quarter hour:
-my $rounding_precision = $QUARTERS;
-my $seconds_conversion = $TO_HRS;
-my $printf_fmt         = "%5.2f";
-#
-# If you need output by tenth of an hour, use these values:
-# my $rounding_precision = $TENTHS;
-# my $seconds_conversion = $TO_HRS;
-# my $printf_fmt         = "%5.1f";
-#
-# If you need output in minutes, rounded to nearest minute:
-# my $rounding_precision = $WHOLE;
-# my $seconds_conversion = $TO_MINS;
-# my $printf_fmt         = "%5.0f";
-# #====================================================================
 
 #
 # Scan log file to build %totals, and identify most recent task.
@@ -141,7 +121,7 @@ if ( defined $prev ) {
 
     $diff = $now - $then;
     $totals{"$prev"} += $diff;
-    my $min = nearest( $QUARTERS, $diff / $TO_MINS );
+    my $min = nearest( 0.25, $diff / get_minutes_conversion() );
 
     if ( ! defined $task ) {
         printf "Doing [%s], %.2f minutes, started at %s\n", $prev, $min, $startprev;
@@ -165,24 +145,29 @@ elsif (!defined $task) {
 #
 # task quit: rotate log file and print report.
 #
-# TODO: move this to a sub-routine
-#
 if ( $task =~ /^quit/i ) {
-    my $eod_filename = get_endofday_filename( $task );
+    my $eodref = get_endofday( $task );
+    my $eod_filename = $$eodref{fn};
+    die "Error: Aborting, end-of-day file [$eod_filename] already exists\n" if ( -f $eod_filename );
+
     open( EODFH, ">$eod_filename") or die "Error: Could not open $eod_filename for writing";
 
+    # Standardize task quit in case day abbr given
+    my $day_name = $$eodref{dt}->day_name();
+    $task = "Quit " . $day_name;
     &record_task( $logfn, $task, $now, $tc );
 
     my %rounded;
     foreach my $tsk (keys %totals) {
-        my $r = nearest( $rounding_precision, $totals{"$tsk"} / $seconds_conversion );
+        my $r = nearest( get_rounding_precision(), $totals{"$tsk"} / get_seconds_conversion() );
         $r    = abs $r if ( $r == 0 ); # get rid of annoying -0.00 values
         $tsk  = $tc->title("$tsk");
         $rounded{"$tsk"} = $r;
     }
 
-    print "\nTask summary:";
-    print "\n==============================\n";
+    # TODO: move summary output to a method
+    print "\nTask summary for $day_name, " . $$eodref{dt}->mdy('/') . ":";
+    print "\n=============================================\n";
 
     my $found_zero = 0;
     foreach my $tsk (sort { $totals{"$b"} <=> $totals{"$a"} or lc("$a") cmp lc("$b") } keys %totals) {
@@ -190,11 +175,12 @@ if ( $task =~ /^quit/i ) {
         my $raw_total = $totals{"$tsk"};
         if ( $found_zero == 0 && $rounded_total == 0 ) {
             $found_zero = 1;
-            print "------------------------------\n";
+            print "---------------------------------------------\n";
         } elsif ( $found_zero == 1 && $rounded_total != 0 ) {
             $found_zero = 0;
-            print "------------------------------\n";
+            print "---------------------------------------------\n";
         }
+        my $printf_fmt = get_printf_fmt();
         printf "$printf_fmt  %s\n", $rounded_total, $tsk;
         printf EODFH "%-5d  %s\n", $raw_total, $tsk;
     }
@@ -288,6 +274,8 @@ This program allows tracking start times of various tasks for timesheets.
 =over
 
 =item C<tasklogs>
+
+=item L<DateTime>
 
 =item L<Lingua::EN::Titlecase>
 
