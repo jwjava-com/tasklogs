@@ -13,6 +13,8 @@ either Cygwin or Linux.
 ## TODOS
 
 - Allow changing back to the previous (or previous X) task (ala bash !! or !-n)
+- Allow renaming the current task
+- Consider sorting `.hours` file before totaling time
 - Allow resuming a day after a previous 'quit'
 - Add better handling of incorrect command-line parameters
 - Port to other languages (spoken & programming)
