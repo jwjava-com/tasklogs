@@ -85,21 +85,52 @@ elsif ($ARGV[0] =~ /^\+[\d.]+$/) {
 # task taskname, or task quit
 else {
     if (defined $ARGV[0]) {
+        $task = join( ' ', @ARGV );
+
         # warning to potential mistake (forgetting the -/+)
         if ($ARGV[0] =~ /^[\d.]+$/) {
             print STDERR "Warning: You specified a number as the 1st word of the task name.\n";
             print STDERR "         Did you mean to provide a time offset instead?\n";
         }
+        # prevent taskname of '-'
+        elsif ( $ARGV[0] eq '-' && ! defined $ARGV[1] ) {
+            die "Error: Task name of hypen not allowed\n";
+        }
+        # if user typed '- mins' instead of '-mins', warn, but fix for them
+        elsif ( $ARGV[0] eq '-' && defined $ARGV[1] ) {
+            if ( $ARGV[1] =~ /^[\d.]+$/ ) {
+                print STDERR "Warning: You put a space between the minus and time offset.\n";
+                print STDERR "         Assuming this was a mistake and proceeding accordingly.\n";
+                $now = time - 60 * $ARGV[1];
+                $task =~ s/^- \d+ //;
+            } else {
+                die "Error: Invalid arguments: " . join( ' ', @ARGV ) . "\n";
+            }
+        }
+        # prevent taskname of '+'
+        elsif ( $ARGV[0] eq '+' && ! defined $ARGV[1] ) {
+            die "Error: Task name of plus not allowed\n";
+        }
+        # if user typed '+ mins' instead of '+mins', warn, but fix for them
+        elsif ( $ARGV[0] eq '+' && defined $ARGV[1] ) {
+            if ( $ARGV[1] =~ /^[\d.]+$/ ) {
+                print STDERR "Warning: You put a space between the plus and time offset.\n";
+                print STDERR "         Assuming this was a mistake and proceeding accordingly.\n";
+                $now = time + 60 * $ARGV[1];
+                $task =~ s/^\+ \d+ //;
+            } else {
+                die "Error: Invalid arguments: " . join( ' ', @ARGV ) . "\n";
+            }
+        }
         # task -r oldname newname
         elsif ($ARGV[0] =~ /^-r$/ && defined $ARGV[1] && defined $ARGV[2]) {
-            die "Error: Too many parameters, task names with spaces must be quoted\n" if (defined $ARGV[3]);
+            die "Error: Too many parameters, task names with spaces must be quoted for rename\n" if (defined $ARGV[3]);
             shift; # ignore '-r'
             my $oldtask = shift;
             my $newtask = shift;
             rename_task( $logfn, $oldtask, $newtask );
             exit;
         }
-        $task = join( ' ', @ARGV );
     } else {
         $task = undef;
     }
@@ -110,6 +141,7 @@ if ( defined $task ) {
     $task =~ s/^\s+//;
     $task =~ s/\s+$//;
     $task = $tc->title("$task");
+    &update_currtask( $task );
 }
 
 #
@@ -206,6 +238,13 @@ sub record_task($$$$;) {
     $task = $tc->title("$task");
     print OUTFILE "$now $task\n";
     close OUTFILE;
+}
+
+######################################################################
+# Update the currtask file, if one is defined by environment variable
+#
+sub update_currtask($) {
+    my $task = shift;
 
     if ( defined &get_currtask_fn() ) {
         my $currtask_fn = &get_currtask_fn();
