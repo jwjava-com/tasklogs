@@ -202,10 +202,41 @@ else {
 #
 sub record_task($$$$;) {
     my ($logfn, $task, $now, $tc) = @_;
-    open OUTFILE, ">>$logfn" or die "Error: $logfn: $!\n";
+    open OUTFILE, ">>$logfn" or die "Error: cannot open daily log file for writing: $logfn: $!\n";
     $task = $tc->title("$task");
     print OUTFILE "$now $task\n";
     close OUTFILE;
+
+    if ( defined &get_currtask_fn() ) {
+        my $currtask_fn = &get_currtask_fn();
+
+        if ( $task =~ /^quit/i ) {
+            unlink "$currtask_fn"
+                or &write_currtask_file( "Quit" )
+                and die "Error: cannot remove current task file $currtask_fn: $!\n";
+        } else {
+            &write_currtask_file( $task );
+        }
+    }
+}
+
+######################################################################
+# Return the value of the TASKLOGS_CURRTASK_FILE env var
+#
+sub get_currtask_fn() {
+    return $ENV{TASKLOGS_CURRTASK_FILE};
+}
+
+######################################################################
+# Write out the current task to the defined current task file
+#
+sub write_currtask_file($) {
+    my $task = shift;
+    my $currtask_fn = &get_currtask_fn();
+    open CURRTASK, ">$currtask_fn"
+        or die "Error: cannot open current task file $currtask_fn for writing: $!\n";
+    print CURRTASK "$task"; # NOTE: do not add a newline
+    close CURRTASK;
 }
 
 ######################################################################
@@ -280,6 +311,17 @@ This program allows tracking start times of various tasks for timesheets.
 =item L<Lingua::EN::Titlecase>
 
 =item L<Math::Round>
+
+=back
+
+=head1 OPTIONAL ENVIRONMENT VARIABLES
+
+=over
+
+=item TASKLOGS_CURRTASK_FILE
+    If set, `task.pl` will save the current task to this file.
+    This is useful for using the current task name in other scripts.
+    This file will be attempted to be removed during C<task.pl quit> processing.
 
 =back
 

@@ -40,6 +40,13 @@ This program allows tracking start times of various tasks for timesheets.
 - [Lingua::EN::Titlecase](https://metacpan.org/pod/Lingua::EN::Titlecase)
 - [Math::Round](https://metacpan.org/pod/Math::Round)
 
+# OPTIONAL ENVIRONMENT VARIABLES
+
+- TASKLOGS\_CURRTASK\_FILE
+    If set, \`task.pl\` will save the current task to this file.
+    This is useful for using the current task name in other scripts.
+    This file will be attempted to be removed during `task.pl quit` processing.
+
 # AUTHORS
 
 - Jon Warren `jon@jonwarren.info`
