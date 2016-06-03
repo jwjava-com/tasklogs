@@ -22,7 +22,7 @@ my $logfn = get_logfn();
 my ($now, $task, $prev, $then, $diff);
 my %totals;
 
-# Scan log file to build %totals, and identify most recent task.
+# Scan log file to build %totals, identify most recent task, & count lines.
 # File format is one line for each task switch:
 # time taskname
 if ( -f $logfn ) {
@@ -126,17 +126,25 @@ else {
                 die "Error: Invalid arguments: " . join( ' ', @ARGV ) . "\n";
             }
         }
-        # task -r oldname newname
-        elsif ( $ARGV[0] =~ /^-r$/ && defined $ARGV[1] && defined $ARGV[2] ) {
-            die "Error: Too many parameters, task names with spaces must be quoted for rename\n" if ( defined $ARGV[3] );
-            shift; # ignore '-r'
-            my $oldtask = shift;
-            my $newtask = shift;
-            # Only need to standardize capitalization of new task for writing into file
-            $nettask = $tc->title("$nettask");
-            rename_task( $logfn, $oldtask, $newtask );
+        # task -r oldname newname (rename all oldname to newname)
+        elsif ( $ARGV[0] eq '-r' && defined $ARGV[1] && defined $ARGV[2] ) {
+            if ( defined $ARGV[3] ) {
+                die "Error: Too many parameters, task names with spaces must be quoted for rename\n"
+            }
+            rename_tasks( $logfn, $ARGV[1], $ARGV[2] );
+            &update_currtask( $ARGV[2] );
             exit;
         }
+        # task -R newname (rename current task to newname)
+        elsif ( $ARGV[0] eq '-R' && defined $ARGV[1] ) {
+            if ( defined $ARGV[2] ) {
+                die "Error: Too many parameters, task names with spaces must be quoted for rename\n"
+            }
+            rename_task( $logfn, $ARGV[1] );
+            &update_currtask( $ARGV[1] );
+            exit;
+        }
+        # else handled by code before this if-elsif construct
     } else {
         $task = undef;
     }
@@ -195,7 +203,7 @@ if ( $task =~ /^quit/i ) {
     # Standardize task quit in case day abbr given
     my $day_name = $$eodref{dt}->day_name();
     $task = "Quit " . $day_name;
-    &record_task( $logfn, $task, $now, $tc );
+    &record_task( $logfn, $task, $now );
 
     my %rounded;
     foreach my $tsk (keys %totals) {
@@ -232,18 +240,22 @@ if ( $task =~ /^quit/i ) {
     exec "perl $daily_script $task";
 }
 else {
-    &record_task( $logfn, $task, $now, $tc );
+    &record_task( $logfn, $task, $now );
 
     print "Now doing [$task]\n";
 }
 
 ######################################################################
+exit; # End of main script ###########################################
+######################################################################
+
+######################################################################
 # Append new task switch record to logfile.
 #
-sub record_task($$$$;) {
-    my ($logfn, $task, $now, $tc) = @_;
+sub record_task($$$;) {
+    my ($logfn, $task, $now) = @_;
     open OUTFILE, ">>$logfn" or die "Error: cannot open daily log file for writing: $logfn: $!\n";
-    $task = $tc->title("$task");
+    $task = Lingua::EN::Titlecase->new("$task")->title();
     print OUTFILE "$now $task\n";
     close OUTFILE;
 }
@@ -282,7 +294,7 @@ sub write_currtask_file($) {
     my $currtask_fn = &get_currtask_fn();
     open CURRTASK, ">$currtask_fn"
         or die "Error: cannot open current task file $currtask_fn for writing: $!\n";
-    print CURRTASK "$task"; # NOTE: do not add a newline
+    print CURRTASK Lingua::EN::Titlecase->new("$task")->title(); # NOTE: do not add a newline
     close CURRTASK;
 }
 
