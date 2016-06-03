@@ -16,24 +16,23 @@ use DateTime;
 use Lingua::EN::Titlecase;
 use Math::Round qw(nearest);
 
-#
+my $tc    = Lingua::EN::Titlecase->new("");
+my $logfn = get_logfn();
+
+my ($now, $task, $prev, $then, $diff);
+my %totals;
+
 # Scan log file to build %totals, and identify most recent task.
 # File format is one line for each task switch:
 # time taskname
-#
-my %totals;
-my ($now, $task, $prev, $then, $diff);
-my $tc = Lingua::EN::Titlecase->new("");
-
-my $logfn = get_logfn();
-if (-f $logfn) {
+if ( -f $logfn ) {
     open INFILE, "<$logfn" or die "Error: $logfn: $!\n";
     while (<INFILE>) {
         chomp;
         ($now, $task) = split( /\s+/, $_, 2 );
         $task = $tc->title("$task");
 
-        if (defined $prev) {
+        if ( defined $prev ) {
             $diff = $now - $then;
             $totals{"$prev"} += $diff;
         }
@@ -47,7 +46,7 @@ if (-f $logfn) {
 #
 # Get command line arguments
 #
-if (!defined($ARGV[0]) && !defined($prev)) {
+if (  !defined( $ARGV[0] ) && !defined( $prev ) ) {
     print STDERR <<"eof";
 No task specified.
 Run "task.pl -?" for options.
@@ -57,8 +56,8 @@ eof
     undef $task;
     $now = time;
 }
-elsif ($ARGV[0] eq '-?') {
-    # task -?
+# task -?
+elsif ( $ARGV[0] eq '-?' ) {
     print STDERR <<"eof";
 Usage:
 task.pl [-<minutesago>|+(minutestoadd)] <taskname>
@@ -68,15 +67,20 @@ task.pl quit [<day_of_week>]
 eof
     exit;
 }
+# task --silent
+elsif ( $ARGV[0] eq '--silent' && defined( $prev ) ) {
+    &update_currtask( $prev );
+    exit;
+}
 # task -minutes taskname
-elsif ($ARGV[0] =~ /^-[\d.]+$/) {
+elsif ( $ARGV[0] =~ /^-[\d.]+$/ ) {
     my $args = join( ' ', @ARGV );
     ($mins, $task) = split( /\s+/, $args, 2 );
     my $ago = abs $mins;
     $now = time - 60 * $ago;
 }
 # task +minutes taskname
-elsif ($ARGV[0] =~ /^\+[\d.]+$/) {
+elsif ( $ARGV[0] =~ /^\+[\d.]+$/ ) {
     my $args = join( ' ', @ARGV );
     ($mins, $task) = split( /\s+/, $args, 2 );
     my $add = abs $mins;
@@ -84,11 +88,11 @@ elsif ($ARGV[0] =~ /^\+[\d.]+$/) {
 }
 # task taskname, or task quit
 else {
-    if (defined $ARGV[0]) {
+    if ( defined $ARGV[0] ) {
         $task = join( ' ', @ARGV );
 
         # warning to potential mistake (forgetting the -/+)
-        if ($ARGV[0] =~ /^[\d.]+$/) {
+        if ( $ARGV[0] =~ /^[\d.]+$/ ) {
             print STDERR "Warning: You specified a number as the 1st word of the task name.\n";
             print STDERR "         Did you mean to provide a time offset instead?\n";
         }
@@ -123,8 +127,8 @@ else {
             }
         }
         # task -r oldname newname
-        elsif ($ARGV[0] =~ /^-r$/ && defined $ARGV[1] && defined $ARGV[2]) {
-            die "Error: Too many parameters, task names with spaces must be quoted for rename\n" if (defined $ARGV[3]);
+        elsif ( $ARGV[0] =~ /^-r$/ && defined $ARGV[1] && defined $ARGV[2] ) {
+            die "Error: Too many parameters, task names with spaces must be quoted for rename\n" if ( defined $ARGV[3] );
             shift; # ignore '-r'
             my $oldtask = shift;
             my $newtask = shift;
@@ -161,7 +165,7 @@ if ( defined $prev ) {
         printf "Doing [%s], %.2f minutes, started at %s\n", $prev, $min, $startprev;
         exit;
     }
-    elsif ( lc($task) eq lc($prev) ) {
+    elsif ( lc( $task ) eq lc( $prev ) ) {
         printf "Already doing [%s], %.2f minutes, started at %s\n", $prev, $min, $startprev;
         exit;
     }
@@ -172,7 +176,7 @@ if ( defined $prev ) {
 # If 1st run of the day (e.g., no $prev) and we gave no $task, exit
 # Really we shouldn't ever reach this point, but... it's here, so (shrugs)
 # aka: I don't remember from back in 1999-2004 when I first wrote this why I needed this check.
-elsif (!defined $task) {
+elsif ( !defined $task ) {
     exit;
 }
 
