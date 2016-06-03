@@ -142,6 +142,8 @@ if ( defined $task ) {
     $task =~ s/\s+$//;
     $task = $tc->title("$task");
     &update_currtask( $task );
+} elsif ( defined $prev ) {
+    &update_currtask( $prev );
 }
 
 #
