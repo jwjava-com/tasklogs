@@ -132,6 +132,8 @@ else {
             shift; # ignore '-r'
             my $oldtask = shift;
             my $newtask = shift;
+            # Only need to standardize capitalization of new task for writing into file
+            $nettask = $tc->title("$nettask");
             rename_task( $logfn, $oldtask, $newtask );
             exit;
         }
