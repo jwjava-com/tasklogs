@@ -14,12 +14,12 @@ either Cygwin or Linux.
 
 - Allow changing back to the previous (or previous X) task (ala bash !! or !-n)
 - Allow renaming the current task
-- Consider sorting `.hours` file before totaling time
 - Allow resuming a day after a previous 'quit'
 - Update fmttimearr() to use DateTime
 - Update rename\_tasks() to use Tie::File
 - Add better handling of incorrect command-line parameters
 - Port to other languages (spoken & programming)
+- ~~(done) Consider sorting `.hours` file before totaling time~~
 - ~~(done) `weekly.pl`: Auto-calculate Saturday date if none specified~~
 - ~~(done) Extract common code to a module~~
 - ~~(done) Expand documentation~~

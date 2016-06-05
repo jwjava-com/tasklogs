@@ -15,6 +15,7 @@ use tasklogs;
 use DateTime;
 use Lingua::EN::Titlecase;
 use Math::Round qw(nearest);
+use Tie::File;
 
 my $tc    = Lingua::EN::Titlecase->new("");
 my $logfn = get_logfn();
@@ -26,9 +27,10 @@ my %totals;
 # File format is one line for each task switch:
 # time taskname
 if ( -f $logfn ) {
-    open INFILE, "<$logfn" or die "Error: $logfn: $!\n";
-    while (<INFILE>) {
-        chomp;
+    my @logfile;
+    tie( @logfile, 'Tie::File', $logfn );
+    @logfile = ((), sort { $a <=> $b } @logfile); # prevent adding blank lines during sort
+    for ( @logfile ) {
         ($now, $task) = split( /\s+/, $_, 2 );
         $task = $tc->title("$task");
 
@@ -40,7 +42,6 @@ if ( -f $logfn ) {
         $prev = $task;
         $then = $now;
     }
-    close INFILE;
 }
 
 #
@@ -370,6 +371,8 @@ This program allows tracking start times of various tasks for timesheets.
 =item L<Lingua::EN::Titlecase>
 
 =item L<Math::Round>
+
+=item L<Tie::File>
 
 =back
 
