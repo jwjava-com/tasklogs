@@ -1,0 +1,112 @@
+###########################################################################
+# .bash_tasklogs
+#--------------------------------------------------------------------------
+# Tasklog's bash configs, functions, and aliases
+###########################################################################
+
+# Main folder location
+############################################################
+export TASKLOGS="${HOME}/tasklogs"
+
+# Optional current task file location (for prompt inclusion)
+############################################################
+export TASKLOGS_CURRTASK_FILE="${HOME}/.current_task"
+
+#prompt() - set a prompt using tasklogs, if desired
+#  Sets term window title to contain full PWD path.
+#  Sets prompt to contain only PWD basename.
+#  Uses colors.
+############################################################
+function prompt() {
+  if [ "${TASKLOGS_CURRTASK_FILE}" != "" ] && [ -f "${TASKLOGS_CURRTASK_FILE}" ]; then
+    CURRTASK=`cat "${TASKLOGS_CURRTASK_FILE}"`
+    export PS1="\[\e]0;[$CURRTASK] \u@\h \w\007\]\n\[\033[1;32m\][$CURRTASK] \u@\h \[\033[1;33m\]\W\[\033[0m\]\n\$ "
+  else
+    export PS1="\[\e]0;\u@\h:\w\007\]\n\[\033[1;32m\]\u@\h \[\033[1;33m\]\W\[\033[0m\]\n\$ "
+  fi
+}
+
+# tasklogs script function shortcuts
+############################################################
+function task   { ${TASKLOGS}/task.pl "$@";   }
+function daily  { ${TASKLOGS}/daily.pl "$@";  }
+function weekly { ${TASKLOGS}/weekly.pl "$@"; }
+
+# task functions
+############################################################
+function taskemail    { task "$@" "email";                 }
+function taskcalendar { task "$@" "calendar";              }
+function taskphone    { task "$@" "phone";                 }
+function taskmeeting  { task "$@" "meeting";               }
+function taskenv      { task "$@" "env config";            }
+function tasktraining { task "$@" "training";              }
+
+function taskbreak    { task "$@" "break";                 }
+function tasklunch    { task "$@" "lunch";                 }
+function taskdinner   { task "$@" "dinner";                }
+function tasklinkedin { task "$@" "linkedin";              }
+function taskmeetup   { task "$@" "meetup";                }
+function taskfacebook { task "$@" "facebook";              }
+function tasktwitter  { task "$@" "twitter";               }
+function taskweather  { task "$@" "weather";               }
+function taskmusic    { task "$@" "music";                 }
+function tasktv       { task "$@" "tv";                    }
+function taskmovie    { task "$@" "movie";                 }
+
+function taskquit {
+  if [ "$3" != "" ]; then
+    task "$1" "quit" "$2" "$3"
+  else
+    task "quit" "$@"
+  fi
+}
+
+# task aliases
+############################################################
+alias t='task'
+alias d='daily'
+
+alias temail='taskemail'
+alias tem='taskemail'
+alias te='taskemail'
+alias tcalendar='taskcalendar'
+alias tcal='taskcalendar'
+alias tphone='taskphone'
+alias tph='taskphone'
+alias tp='taskphone'
+alias tmeeting='taskmeeting'
+alias tmeet='taskmeeting'
+alias tmtg='taskmeeting'
+alias tenv='taskenv'
+alias ttraining='tasktraining'
+alias ttrain='tasktraining'
+alias ttr='tasktraining'
+
+alias tbreak='taskbreak'
+alias tbr='taskbreak'
+alias tlunch='tasklunch'
+alias tlun='tasklunch'
+alias tlu='tasklunch'
+alias tdinner='taskdinner'
+alias tdin='taskdinner'
+alias tdi='taskdinner'
+alias tlinkedin='tasklinkedin'
+alias tli='tasklinkedin'
+alias tmeetup='taskmeetup'
+alias tmu='taskmeetup'
+alias tfacebook='taskfacebook'
+alias tfb='taskfacebook'
+alias ttwitter='tasktwitter'
+alias ttw='tasktwitter'
+alias tweather='taskweather'
+alias twe='taskweather'
+alias tmusic='taskmusic'
+alias tmus='taskmusic'
+alias ttv='tasktv'
+alias tmovie='taskmovie'
+alias tmov='taskmovie'
+
+alias tquit='taskquit'
+alias tq='taskquit'
+
+# vim: filetype=sh
