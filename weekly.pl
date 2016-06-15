@@ -261,12 +261,12 @@ sub errmsg_usage($) {
     return <<"eof";
     Error: $clarification
     Usage:
-weekly.pl [-c|-r|-u] YYMMDD
+weekly.pl [-c|-r|-u] YYYYMMDD
 weekly.pl --delete
-    -c YYMMDD   Create new weekly timesheet for week ending YYMMDD
-    -u YYMMDD   Update existing weekly timesheet for week ending YYMMDD
-    -r YYMMDD   Display existing weekly timesheet for week ending YYMMDD
-    --delete    Delete daily log files
+    -c YYYYMMDD   Create new weekly timesheet for week ending YYYYMMDD
+    -u YYYYMMDD   Update existing weekly timesheet for week ending YYYYMMDD
+    -r YYYYMMDD   Display existing weekly timesheet for week ending YYYYMMDD
+    --delete      Delete daily log files
 
 eof
 }
@@ -290,14 +290,14 @@ This program generates a weekly timesheet.
 
 =over
 
-=item weekly.pl C<-c YYMMDD>
-    create new weekly timesheet for week ending I<YYMMDD>
+=item weekly.pl C<-c YYYYMMDD>
+    create new weekly timesheet for week ending I<YYYYMMDD>
 
-=item weekly.pl C<-u YYMMDD>
-    update existing weekly timesheet for week ending I<YYMMDD>
+=item weekly.pl C<-u YYYYMMDD>
+    update existing weekly timesheet for week ending I<YYYYMMDD>
 
-=item weekly.pl C<-r YYMMDD>
-    display existing weekly timesheet for week ending I<YYMMDD>
+=item weekly.pl C<-r YYYYMMDD>
+    display existing weekly timesheet for week ending I<YYYYMMDD>
 
 =item weekly.pl C<--delete>
     delete daily log files
@@ -322,8 +322,8 @@ Environment variables are used for determining which OS path separator to use.
 
 =over
 
-=item timesheets/C<YYMMDD.log>
-    timesheet for week ending I<YYMMDD>
+=item timesheets/C<YYYYMMDD.log>
+    timesheet for week ending I<YYYYMMDD>
 
 =item .C<day-of-week>
     end of day report for the indicated I<day-of-week> (e.g., C<.Monday>, or C<mon>)

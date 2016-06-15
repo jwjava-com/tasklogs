@@ -8,12 +8,12 @@ This program generates a weekly timesheet.
 
 # SYNOPSIS
 
-- weekly.pl `-c YYMMDD`
-    create new weekly timesheet for week ending _YYMMDD_
-- weekly.pl `-u YYMMDD`
-    update existing weekly timesheet for week ending _YYMMDD_
-- weekly.pl `-r YYMMDD`
-    display existing weekly timesheet for week ending _YYMMDD_
+- weekly.pl `-c YYYYMMDD`
+    create new weekly timesheet for week ending _YYYYMMDD_
+- weekly.pl `-u YYYYMMDD`
+    update existing weekly timesheet for week ending _YYYYMMDD_
+- weekly.pl `-r YYYYMMDD`
+    display existing weekly timesheet for week ending _YYYYMMDD_
 - weekly.pl `--delete`
     delete daily log files
 
@@ -28,8 +28,8 @@ Environment variables are used for determining which OS path separator to use.
 
 # FILES
 
-- timesheets/`YYMMDD.log`
-    timesheet for week ending _YYMMDD_
+- timesheets/`YYYYMMDD.log`
+    timesheet for week ending _YYYYMMDD_
 - .`day-of-week`
     end of day report for the indicated _day-of-week_ (e.g., `.Monday`, or `mon`)
 - .break\_aliases

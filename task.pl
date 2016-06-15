@@ -271,9 +271,7 @@ sub update_currtask($) {
         my $currtask_fn = &get_currtask_fn();
 
         if ( $task =~ /^quit/i ) {
-            unlink "$currtask_fn"
-                or &write_currtask_file( "Quit" )
-                and die "Error: cannot remove current task file $currtask_fn: $!\n";
+            unlink "$currtask_fn" or &write_currtask_file( "Quit" );
         } else {
             &write_currtask_file( $task );
         }

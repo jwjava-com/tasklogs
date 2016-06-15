@@ -12,13 +12,20 @@ either Cygwin or Linux.
 
 ## TODOS
 
+- Fix ending Sunday (week) on Monday morning
+- Add "started at" time to current task file
+- Add backup option to backup raw daily task log files to a directory
+- Add ability to provide date/time for altering start time of tasks (vs -mins)
 - Allow changing back to the previous (or previous X) task (ala bash !! or !-n)
 - Allow renaming the current task
 - Allow resuming a day after a previous 'quit'
 - Update fmttimearr() to use DateTime
 - Update rename\_tasks() to use Tie::File
 - Add better handling of incorrect command-line parameters
-- Port to other languages (spoken & programming)
+- Translate to other languages (русский язык)
+- (started, [to Java](https://github.com/jonwarren/jtasklogs)) Port to other languages
+- ~~(done) Fix `weekly.pl` help text to have 4-digit years~~
+- ~~(done) Fix removal of current_task file on quit~~
 - ~~(done) Consider sorting `.hours` file before totaling time~~
 - ~~(done) `weekly.pl`: Auto-calculate Saturday date if none specified~~
 - ~~(done) Extract common code to a module~~
