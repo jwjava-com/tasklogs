@@ -201,9 +201,6 @@ if ( $task =~ /^quit/i ) {
 
     open( EODFH, ">$eod_filename") or die "Error: Could not open $eod_filename for writing";
 
-    # Standardize task quit in case day abbr given
-    my $day_name = $$eodref{dt}->day_name();
-    $task = "Quit " . $day_name;
     &record_task( $logfn, $task, $now );
 
     my %rounded;
@@ -215,6 +212,7 @@ if ( $task =~ /^quit/i ) {
     }
 
     # TODO: move summary output to a method
+    my $day_name = $$eodref{dt}->day_name();
     print "\nTask summary for $day_name, " . $$eodref{dt}->mdy('/') . ":";
     print "\n=============================================\n";
 
