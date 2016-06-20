@@ -173,9 +173,9 @@ elsif ( $action =~ /^-[cu]$/ ) {
 
     my $fmt = get_printf_fmt();
     # Output the Daily and Weekly totals to the week's log file.
-    print  OUTFILE "========================================\n";
+    print  OUTFILE "==========================================\n";
     print  OUTFILE "TOTALS FOR EACH DAY\n";
-    print  OUTFILE "========================================\n";
+    print  OUTFILE "==========================================\n";
     printf OUTFILE "$fmt %-40.40s\n", $totals{Monday}{rounded_total},  'MON total time';
     printf OUTFILE "$fmt %-40.40s\n", $totals{Monday}{rounded_breaks}, '  - breaks/lunch';
     printf OUTFILE "$fmt %-40.40s\n", $totals{Monday}{rounded_worked}, '  = TIME WORKED';
@@ -203,11 +203,11 @@ elsif ( $action =~ /^-[cu]$/ ) {
     printf OUTFILE "$fmt %-40.40s\n", $totals{Sunday}{rounded_total},  'SUN total time';
     printf OUTFILE "$fmt %-40.40s\n", $totals{Sunday}{rounded_breaks}, '  - breaks/lunch';
     printf OUTFILE "$fmt %-40.40s\n", $totals{Sunday}{rounded_worked}, '  = TIME WORKED';
-    print  OUTFILE "---- -----------------------------------\n";
+    print  OUTFILE "------ -----------------------------------\n";
     printf OUTFILE "$fmt %-40.40s\n", $totals{Week}{rounded_total},  'WEEK total time';
     printf OUTFILE "$fmt %-40.40s\n", $totals{Week}{rounded_breaks}, '   - breaks/lunch';
     printf OUTFILE "$fmt %-40.40s\n", $totals{Week}{rounded_worked}, '   = TIME WORKED';
-    print  OUTFILE "---- -----------------------------------\n";
+    print  OUTFILE "------ -----------------------------------\n";
     print  OUTFILE "\n";
      
     # Send an exact copy of each day's log file to the week's log file.
