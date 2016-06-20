@@ -40,17 +40,17 @@ my ($TO_MINS, $TO_HRS) = (60, 3600);
 # By default this will output values rounded to nearest quarter hour:
 my $rounding_precision = $QUARTERS;
 my $seconds_conversion = $TO_HRS;
-my $printf_fmt         = "%5.2f";
+my $printf_fmt         = "%6.2f";
 #
 # If you need output by tenth of an hour, use these values:
 # my $rounding_precision = $TENTHS;
 # my $seconds_conversion = $TO_HRS;
-# my $printf_fmt         = "%5.1f";
+# my $printf_fmt         = "%6.1f";
 #
 # If you need output in minutes, rounded to nearest minute:
 # my $rounding_precision = $WHOLE;
 # my $seconds_conversion = $TO_MINS;
-# my $printf_fmt         = "%5.0f";
+# my $printf_fmt         = "%6.0f";
 # #====================================================================
 
 # #====================================================================
